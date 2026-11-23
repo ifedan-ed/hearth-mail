@@ -48,7 +48,6 @@ pub enum SpamClassifier {
 #[derive(Debug, Clone, Default)]
 pub struct SpamFilterConfig {
     pub enabled: bool,
-    pub card_is_ham: bool,
     pub trusted_reply: bool,
     pub grey_list_expiry: Option<u64>,
 
@@ -139,7 +138,6 @@ pub struct ClassifierConfig {
     pub min_ham_samples: u64,
     pub min_spam_samples: u64,
     pub auto_learn_reply_ham: bool,
-    pub auto_learn_card_is_ham: bool,
     pub auto_learn_spam_trap: bool,
     pub auto_learn_spam_rbl_count: u32,
     pub hold_samples_for: u64,
@@ -238,7 +236,6 @@ impl SpamFilterConfig {
 
         SpamFilterConfig {
             enabled: spam.enable,
-            card_is_ham: spam.trust_contacts,
             trusted_reply: spam.trust_replies,
             dnsbl: DnsBlConfig::parse(bp).await,
             rules: SpamFilterRules::parse(bp).await,
@@ -560,7 +557,6 @@ impl ClassifierConfig {
             w_params,
             i_params,
             reservoir_capacity: classifier.reservoir_capacity as usize,
-            auto_learn_card_is_ham: classifier.learn_ham_from_card,
             auto_learn_reply_ham: classifier.learn_ham_from_reply,
             auto_learn_spam_trap: classifier.learn_spam_from_traps,
             auto_learn_spam_rbl_count: classifier.learn_spam_from_rbl_hits as u32,

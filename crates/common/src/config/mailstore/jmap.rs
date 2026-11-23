@@ -31,8 +31,6 @@ pub struct JmapConfig {
     pub upload_tmp_ttl: u64,
 
     pub mail_parse_max_items: usize,
-    pub contact_parse_max_items: usize,
-    pub calendar_parse_max_items: usize,
 
     pub event_source_throttle: Duration,
     pub push_attempt_interval: Duration,
@@ -92,8 +90,6 @@ impl JmapConfig {
             upload_tmp_quota_amount: jmap.max_upload_count as usize,
             upload_tmp_ttl: jmap.upload_ttl.into_inner().as_secs().max(1),
             mail_parse_max_items: jmap.parse_limit_email as usize,
-            contact_parse_max_items: jmap.parse_limit_contact as usize,
-            calendar_parse_max_items: jmap.parse_limit_event as usize,
             event_source_throttle: jmap.event_source_throttle.into_inner(),
             web_socket_throttle: jmap.websocket_throttle.into_inner(),
             web_socket_timeout: jmap.websocket_timeout.into_inner(),

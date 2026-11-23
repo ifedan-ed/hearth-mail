@@ -110,6 +110,9 @@ impl From<u64> for DataType {
             12 => DataType::SieveScript,
             19 => DataType::Principal,
             20 => DataType::ShareNotification,
+            // Calendar, contact and file types, removed; push subscriptions
+            // stored before may still ask for them
+            13..=18 | 21 | 22 => DataType::None,
             _ => {
                 debug_assert!(false, "Invalid type_state value: {}", value);
                 DataType::None

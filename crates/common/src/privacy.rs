@@ -215,7 +215,7 @@ impl Server {
             .insert("trace-index".into(), tracing_on && search.index_telemetry);
         facts.collected.insert(
             "full-text-index".into(),
-            search.index_email || search.index_calendar || search.index_contacts,
+            search.index_email,
         );
         let archive_on = retention.archive_deleted_items_for.is_some();
         for id in ["x:ArchivedEmail", "x:ArchivedSieveScript"] {
