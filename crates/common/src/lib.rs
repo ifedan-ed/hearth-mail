@@ -67,6 +67,7 @@ pub mod audit; // inbuxa: the audit log (audit-hold-lock spec, AU)
 pub mod auth;
 pub mod cache;
 pub mod config;
+pub mod contacts_lookup; // Hearth Mail: the spam filter's contacts lookup
 pub mod enterprise; // inbuxa: rebuilt features (AI spam classification)
 pub mod expr;
 pub mod hold; // inbuxa: legal holds (audit-hold-lock spec, LH)

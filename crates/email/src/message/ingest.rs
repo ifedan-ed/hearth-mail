@@ -19,7 +19,7 @@ use crate::{
 };
 use common::{Server, auth::AccessToken};
 use mail_parser::{
-    Header, HeaderName, HeaderValue, Message, MessageParser, PartType,
+    Header, HeaderName, HeaderValue, Message, MessageParser, MimeHeaders, PartType,
     parsers::fields::thread::thread_name,
 };
 use registry::{
@@ -48,10 +48,10 @@ use types::{
     collection::{Collection, SyncCollection},
     field::{EmailField, MailboxField},
     id::Id,
-    keyword::Keyword,
+    keyword::{ITIP_KEYWORD, Keyword},
     special_use::SpecialUse,
 };
-use utils::{cheeky_hash::CheekyHash, snowflake::SnowflakeIdGenerator};
+use utils::{cheeky_hash::CheekyHash, sanitize_email, snowflake::SnowflakeIdGenerator};
 
 #[derive(Default)]
 pub struct IngestedEmail {
@@ -256,16 +256,25 @@ impl EmailIngest for Server {
         let mut extra_headers = String::new();
         let mut extra_headers_parsed = Vec::new();
         let is_spam = match params.source {
-            // The verified sender was used only to trust senders found in the
-            // account's address book and to process calendar invitations, both
-            // gone with contacts and calendars. A contacts lookup through
-            // Nextcloud or Hearth may use it again (docs/integration.md).
             IngestSource::Smtp {
                 deliver_to,
-                envelope_from: _,
-                verified_sender: _,
+                envelope_from,
+                verified_sender,
                 mut is_spam,
             } => {
+                // inbuxa: a signed-in sender is known by its envelope address,
+                // which submission checks against the account; the From header
+                // is trusted only when it passed DMARC
+                let sender = match verified_sender {
+                    VerifiedSender::Envelope => sanitize_email(envelope_from),
+                    VerifiedSender::FromHeader => message
+                        .from()
+                        .and_then(|s| s.first())
+                        .and_then(|s| s.address())
+                        .and_then(sanitize_email),
+                    VerifiedSender::None => None,
+                };
+
                 // Add delivered to header
                 if self.core.smtp.session.data.add_delivered_to {
                     extra_headers = format!("Delivered-To: {deliver_to}\r\n");
@@ -281,6 +290,31 @@ impl EmailIngest for Server {
                 // Spam training on confirmed false positives
                 if self.core.spam.enabled {
                     let mut overridden = None;
+                    // Hearth Mail: a sender in the recipient's contacts isn't
+                    // spam. The contacts live in Nextcloud or Hearth and are
+                    // asked over HTTP (common::contacts_lookup): cached, a
+                    // 300 ms limit, and anything but a clear yes leaves the
+                    // score as it was.
+                    if is_spam
+                        && self.core.spam.card_is_ham
+                        && let Some(lookup) = &self.core.spam.contacts_lookup
+                        && let Some(sender) = &sender
+                        && sender != deliver_to
+                        && lookup.is_known(account_id, deliver_to, sender).await
+                    {
+                        is_spam = false;
+                        if self
+                            .core
+                            .spam
+                            .classifier
+                            .as_ref()
+                            .is_some_and(|c| c.auto_learn_card_is_ham)
+                        {
+                            train_spam = Some(false);
+                        }
+                        overridden = Some("card-exists");
+                    }
+
                     // Check if the message is a trusted reply to a previous message
                     if is_spam
                         && self.core.spam.trusted_reply
@@ -343,6 +377,14 @@ impl EmailIngest for Server {
                         params.mailbox_ids[0] = JUNK_ID;
                         params.keywords.push(Keyword::Junk);
                     }
+                }
+
+                // Hearth Mail: calendar invitations, replies and cancellations
+                // (iTIP over email, RFC 6047) carry the $itip keyword, so a
+                // client finds them with one keyword search instead of
+                // opening every message. Not on mail filed as spam.
+                if !is_spam && is_itip_message(&message) {
+                    params.keywords.push(Keyword::Other(ITIP_KEYWORD.into()));
                 }
 
                 is_spam
@@ -1011,5 +1053,60 @@ impl ThreadMerge {
             thread_id: max_thread_id,
             merge_ids,
         }
+    }
+}
+
+/// Hearth Mail: whether a message carries an iTIP object (RFC 5546) the way
+/// iMIP (RFC 6047) sends it: a `text/calendar` part with a `method`
+/// parameter (REQUEST, REPLY, CANCEL, COUNTER, ...).
+pub fn is_itip_message(message: &Message<'_>) -> bool {
+    message.parts.iter().any(|part| {
+        part.content_type().is_some_and(|ct| {
+            ct.ctype().eq_ignore_ascii_case("text")
+                && ct
+                    .subtype()
+                    .is_some_and(|st| st.eq_ignore_ascii_case("calendar"))
+                && ct.has_attribute("method")
+        })
+    })
+}
+
+#[cfg(test)]
+mod itip_tests {
+    use super::is_itip_message;
+    use mail_parser::MessageParser;
+
+    fn parse(raw: &str) -> bool {
+        is_itip_message(&MessageParser::new().parse(raw.as_bytes()).unwrap())
+    }
+
+    #[test]
+    fn invitations_are_recognised() {
+        // An invitation as Outlook and Gmail send it: multipart/alternative
+        // with a text/calendar part
+        assert!(parse(concat!(
+            "From: a@example.org\r\nTo: b@example.org\r\nSubject: Invitation\r\n",
+            "Content-Type: multipart/alternative; boundary=x\r\n\r\n",
+            "--x\r\nContent-Type: text/plain\r\n\r\nLunch?\r\n",
+            "--x\r\nContent-Type: text/calendar; charset=utf-8; method=REQUEST\r\n\r\n",
+            "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nEND:VCALENDAR\r\n--x--\r\n"
+        )));
+        // A bare reply
+        assert!(parse(concat!(
+            "From: a@example.org\r\nSubject: Accepted\r\n",
+            "Content-Type: TEXT/CALENDAR; METHOD=REPLY\r\n\r\nBEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"
+        )));
+    }
+
+    #[test]
+    fn other_calendar_files_are_not() {
+        // An .ics sent as a file, with no method: not an iTIP message
+        assert!(!parse(concat!(
+            "From: a@example.org\r\nSubject: ics\r\n",
+            "Content-Type: text/calendar\r\n\r\nBEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"
+        )));
+        assert!(!parse(
+            "From: a@example.org\r\nSubject: hi\r\n\r\nHello\r\n"
+        ));
     }
 }

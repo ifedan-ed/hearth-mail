@@ -88,7 +88,12 @@ pub fn env_var(name: &str) -> Result<String, std::env::VarError> {
 /// inbuxa: K-S2: the secrets the server takes from its environment. Each can
 /// come instead from a file that `INBUXA_<name>_FILE` names (a mounted
 /// Kubernetes or Docker secret), so it never has to be in the environment.
-pub const SECRET_ENV_VARS: &[&str] = &["RECOVERY_ADMIN", "WEBMAIL_CLIENT_SECRET"];
+pub const SECRET_ENV_VARS: &[&str] = &[
+    "RECOVERY_ADMIN",
+    "WEBMAIL_CLIENT_SECRET",
+    // Hearth Mail: the spam filter's contacts lookup
+    "CONTACTS_LOOKUP_SECRET",
+];
 
 /// inbuxa: K-S2: one of [`SECRET_ENV_VARS`], from `INBUXA_<name>` or from the
 /// file `INBUXA_<name>_FILE` names. `Ok(None)` when neither is set. Setting

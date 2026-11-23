@@ -40,6 +40,7 @@ use types::{
     collection::Collection,
     field::EmailField,
     id::Id,
+    keyword::{ITIP_KEYWORD, Keyword},
 };
 use utils::chained_bytes::ChainedBytes;
 
@@ -276,6 +277,67 @@ pub async fn test(test: &mut TestServer) {
     .await;
     assert_eq!(john.spam_training_samples().await, vec![]);
 
+    // Hearth Mail: the contacts spam override, using masked email. The
+    // contacts live in Nextcloud or Hearth and are asked over HTTP
+    // (common::contacts_lookup); here a stand-in answers "known" for
+    // dmarc-bill@example.org only, and the server is switched to it.
+    let lookup_url = contacts_lookup_stub("dmarc-bill@example.org").await;
+    let mut core = (*test.server.inner.shared_core.load_full()).clone();
+    core.spam.contacts_lookup = Some(std::sync::Arc::new(
+        common::contacts_lookup::ContactsLookup::new(lookup_url, "stub-secret".into()).unwrap(),
+    ));
+    test.server
+        .inner
+        .shared_core
+        .store(std::sync::Arc::new(core));
+    lmtp.ingest(
+        "dmarc-bill@example.org",
+        &[masked_random_email.as_str()],
+        concat!(
+            "From: dmarc-bill@example.org\r\n",
+            "To: john.doe@example.org\r\n",
+            "Subject: XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X\r\n",
+            "\r\n",
+            "--- Forwarded Message ---\r\n\r\n ",
+            "I'm going to need those TPS reports ASAP. ",
+            "So, if you could do that, that'd be great."
+        ),
+    )
+    .await;
+    let john_cache = test
+        .server
+        .get_cached_messages(john.id().document_id())
+        .await
+        .unwrap();
+    let inbox_ids = john_cache
+        .in_mailbox(INBOX_ID)
+        .map(|e| e.document_id)
+        .collect::<RoaringBitmap>();
+    let junk_ids = john_cache
+        .in_mailbox(JUNK_ID)
+        .map(|e| e.document_id)
+        .collect::<RoaringBitmap>();
+    assert_eq!(john_cache.emails.items.len(), 3);
+    assert_eq!(inbox_ids.len(), 2);
+    assert_eq!(junk_ids.len(), 1);
+    assert_message_headers_contains(
+        &test.server,
+        john.id().document_id(),
+        inbox_ids.max().unwrap(),
+        "X-Spam-Status: No, reason=card-exists",
+    )
+    .await;
+    let samples = john.spam_training_samples().await;
+    assert_eq!(samples.iter().filter(|x| !x.1.is_spam).count(), 1);
+    assert_eq!(samples.iter().filter(|x| x.1.is_spam).count(), 0);
+    // The lookup off again, so the next override is what decides
+    let mut core = (*test.server.inner.shared_core.load_full()).clone();
+    core.spam.contacts_lookup = None;
+    test.server
+        .inner
+        .shared_core
+        .store(std::sync::Arc::new(core));
+
     // Test trusted reply override
     john.jmap_client()
         .await
@@ -305,7 +367,7 @@ pub async fn test(test: &mut TestServer) {
             .emails
             .items
             .len(),
-        3
+        4
     );
     lmtp.ingest(
         "dmarc-bill@example.org",
@@ -336,8 +398,8 @@ pub async fn test(test: &mut TestServer) {
         .in_mailbox(JUNK_ID)
         .map(|e| e.document_id)
         .collect::<RoaringBitmap>();
-    assert_eq!(john_cache.emails.items.len(), 4);
-    assert_eq!(inbox_ids.len(), 2);
+    assert_eq!(john_cache.emails.items.len(), 5);
+    assert_eq!(inbox_ids.len(), 3);
     assert_eq!(junk_ids.len(), 1);
     assert_message_headers_contains(
         &test.server,
@@ -347,7 +409,7 @@ pub async fn test(test: &mut TestServer) {
     )
     .await;
     let samples = john.spam_training_samples().await;
-    assert_eq!(samples.iter().filter(|x| !x.1.is_spam).count(), 1);
+    assert_eq!(samples.iter().filter(|x| !x.1.is_spam).count(), 2);
     assert_eq!(samples.iter().filter(|x| x.1.is_spam).count(), 0);
 
     // EXPN and VRFY
@@ -381,7 +443,7 @@ pub async fn test(test: &mut TestServer) {
 
     tokio::time::sleep(Duration::from_millis(200)).await;
 
-    for (account, num_messages) in [(&john, 5), (&jane, 1), (&bill, 1)] {
+    for (account, num_messages) in [(&john, 6), (&jane, 1), (&bill, 1)] {
         assert_eq!(
             test.server
                 .get_cached_messages(account.id().document_id())
@@ -421,7 +483,7 @@ pub async fn test(test: &mut TestServer) {
     )
     .await;
 
-    for (account, num_messages) in [(&john, 5), (&jane, 2), (&bill, 2)] {
+    for (account, num_messages) in [(&john, 6), (&jane, 2), (&bill, 2)] {
         assert_eq!(
             test.server
                 .get_cached_messages(account.id().document_id())
@@ -460,7 +522,7 @@ pub async fn test(test: &mut TestServer) {
     // Make sure blobs are properly linked
     test.blob_expire_all().await;
 
-    for (account, num_messages) in [(&john, 6), (&jane, 3), (&bill, 3)] {
+    for (account, num_messages) in [(&john, 7), (&jane, 3), (&bill, 3)] {
         let account_id = account.id().document_id();
         let cache = test.server.get_cached_messages(account_id).await.unwrap();
         assert_eq!(
@@ -664,6 +726,50 @@ pub async fn test(test: &mut TestServer) {
         "member shared by two nested lists was delivered more than once"
     );
 
+    // Hearth Mail: a delivered invitation carries the $itip keyword, and
+    // only the invitation does
+    // (a new session: the one above is at its message limit)
+    let mut lmtp = SmtpConnection::connect().await;
+    let before = test
+        .server
+        .get_cached_messages(jane.id().document_id())
+        .await
+        .unwrap()
+        .emails
+        .items
+        .len();
+    for (subject, content_type) in [
+        (
+            "Invitation: planning",
+            "text/calendar; charset=utf-8; method=REQUEST",
+        ),
+        ("Not an invitation", "text/plain; charset=utf-8"),
+    ] {
+        lmtp.ingest(
+            "bill@example.org",
+            &["jane.smith@example.org"],
+            &format!(
+                "From: bill@example.org\r\nTo: jane.smith@example.org\r\nSubject: {subject}\r\n\
+                 Content-Type: {content_type}\r\n\r\nBEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\n\
+                 END:VCALENDAR\r\n"
+            ),
+        )
+        .await;
+    }
+    let jane_cache = test
+        .server
+        .get_cached_messages(jane.id().document_id())
+        .await
+        .unwrap();
+    assert_eq!(jane_cache.emails.items.len(), before + 2);
+    assert_eq!(
+        jane_cache
+            .with_keyword(&Keyword::Other(ITIP_KEYWORD.into()))
+            .count(),
+        1,
+        "only the invitation is tagged $itip"
+    );
+
     // Remove test data
     john.registry_destroy(
         ObjectType::MaskedEmail,
@@ -753,4 +859,31 @@ async fn inbox_count(server: &Server, account: &Account) -> usize {
         .emails
         .items
         .len()
+}
+
+/// Hearth Mail: a stand-in for the contacts lookup (Tidings or Hearth):
+/// answers `{"known": true}` when the request names `known_sender`, and
+/// `false` otherwise. Returns its URL.
+async fn contacts_lookup_stub(known_sender: &'static str) -> String {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}/known", listener.local_addr().unwrap());
+    tokio::spawn(async move {
+        while let Ok((mut socket, _)) = listener.accept().await {
+            tokio::spawn(async move {
+                let mut buf = vec![0u8; 8192];
+                let n = socket.read(&mut buf).await.unwrap_or(0);
+                let request = String::from_utf8_lossy(&buf[..n]).to_lowercase();
+                let known = request.contains("authorization: bearer stub-secret")
+                    && request.contains(known_sender);
+                let body = format!("{{\"known\": {known}}}");
+                let reply = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = socket.write_all(reply.as_bytes()).await;
+            });
+        }
+    });
+    url
 }

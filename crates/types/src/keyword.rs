@@ -40,6 +40,13 @@ pub const NOTIFY: usize = 27;
 pub const UNSUBSCRIBED: usize = 28;
 pub const OTHER: usize = 29;
 
+/// Hearth Mail: the keyword set on delivered calendar invitations, replies
+/// and cancellations (iTIP over email: a `text/calendar` part with a
+/// `method` parameter). Any client may search or show it; Tidings and Hearth
+/// use it to find invitations without opening every message. Stored by name,
+/// like any custom keyword, so no other server needs to know it.
+pub const ITIP_KEYWORD: &str = "$itip";
+
 #[derive(
     rkyv::Serialize,
     rkyv::Deserialize,

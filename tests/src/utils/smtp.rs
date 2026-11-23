@@ -146,7 +146,10 @@ impl SmtpConnection {
     pub async fn read(&mut self, mut num_responses: usize, code: u8) -> Vec<String> {
         let mut lines = Vec::new();
         loop {
-            match tokio::time::timeout(Duration::from_millis(1500), self.reader.next_line()).await {
+            // Hearth Mail: 5 s, not 1.5 s: the first spam-scored delivery in
+            // a debug build on a busy machine took longer and failed the
+            // suite (docs/progress.md, 2026-11-23)
+            match tokio::time::timeout(Duration::from_secs(5), self.reader.next_line()).await {
                 Ok(Ok(Some(line))) => {
                     let is_done = line.as_bytes()[3] == b' ';
                     //let c = println!("<- {:?}", line);

@@ -17,6 +17,7 @@ use mail_auth::common::resolver::ToReverseName;
 use nlp::classifier::model::{CcfhClassifier, FhClassifier};
 use registry::schema::{
     enums::{ExpressionVariable, ModelSize},
+    prelude::ObjectType,
     structs::{
         self, SpamDnsblServer, SpamDnsblSettings, SpamFileExtension, SpamPyzor, SpamRule,
         SpamSettings, SpamTag,
@@ -49,6 +50,13 @@ pub enum SpamClassifier {
 pub struct SpamFilterConfig {
     pub enabled: bool,
     pub trusted_reply: bool,
+    /// Hearth Mail: a sender found in the recipient's contacts isn't spam
+    /// (`x:SpamSettings.trustContacts`), asked of `contacts_lookup`.
+    pub card_is_ham: bool,
+    /// Where the contacts live (Nextcloud through Tidings, or Hearth): set
+    /// by `INBUXA_CONTACTS_LOOKUP_URL` and the secret
+    /// `INBUXA_CONTACTS_LOOKUP_SECRET` (or `_FILE`). None: no lookup.
+    pub contacts_lookup: Option<std::sync::Arc<crate::contacts_lookup::ContactsLookup>>,
     pub grey_list_expiry: Option<u64>,
 
     pub dnsbl: DnsBlConfig,
@@ -138,6 +146,9 @@ pub struct ClassifierConfig {
     pub min_ham_samples: u64,
     pub min_spam_samples: u64,
     pub auto_learn_reply_ham: bool,
+    /// Train ham from mail the contacts lookup let through
+    /// (`x:SpamClassifier.learnHamFromCard`).
+    pub auto_learn_card_is_ham: bool,
     pub auto_learn_spam_trap: bool,
     pub auto_learn_spam_rbl_count: u32,
     pub hold_samples_for: u64,
@@ -230,6 +241,46 @@ pub struct DnsBlServer {
     pub tags: IfBlock,
 }
 
+/// The contacts lookup from its two settings: both set, or neither (with a
+/// warning when only one is, since half a setting is a mistake).
+fn contacts_lookup(
+    bp: &mut Bootstrap,
+) -> Option<std::sync::Arc<crate::contacts_lookup::ContactsLookup>> {
+    let url = types::branding::env_var("CONTACTS_LOOKUP_URL")
+        .ok()
+        .map(|url| url.trim().to_string())
+        .filter(|url| !url.is_empty());
+    let secret = match types::branding::secret_env_var("CONTACTS_LOOKUP_SECRET") {
+        Ok(secret) => secret
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty()),
+        Err(err) => {
+            bp.build_warning(ObjectType::SpamSettings.singleton(), err);
+            None
+        }
+    };
+    match (url, secret) {
+        (Some(url), Some(secret)) => {
+            match crate::contacts_lookup::ContactsLookup::new(url, secret) {
+                Ok(lookup) => Some(std::sync::Arc::new(lookup)),
+                Err(err) => {
+                    bp.build_warning(ObjectType::SpamSettings.singleton(), err);
+                    None
+                }
+            }
+        }
+        (None, None) => None,
+        _ => {
+            bp.build_warning(
+                ObjectType::SpamSettings.singleton(),
+                "INBUXA_CONTACTS_LOOKUP_URL and INBUXA_CONTACTS_LOOKUP_SECRET (or _FILE) go \
+                 together; with one of them only, the contacts lookup is off.",
+            );
+            None
+        }
+    }
+}
+
 impl SpamFilterConfig {
     pub async fn parse(bp: &mut Bootstrap) -> Self {
         let spam = bp.setting_infallible::<SpamSettings>().await;
@@ -237,6 +288,8 @@ impl SpamFilterConfig {
         SpamFilterConfig {
             enabled: spam.enable,
             trusted_reply: spam.trust_replies,
+            card_is_ham: spam.trust_contacts,
+            contacts_lookup: contacts_lookup(bp),
             dnsbl: DnsBlConfig::parse(bp).await,
             rules: SpamFilterRules::parse(bp).await,
             lists: SpamFilterLists::parse(bp).await,
@@ -558,6 +611,7 @@ impl ClassifierConfig {
             i_params,
             reservoir_capacity: classifier.reservoir_capacity as usize,
             auto_learn_reply_ham: classifier.learn_ham_from_reply,
+            auto_learn_card_is_ham: classifier.learn_ham_from_card,
             auto_learn_spam_trap: classifier.learn_spam_from_traps,
             auto_learn_spam_rbl_count: classifier.learn_spam_from_rbl_hits as u32,
             hold_samples_for: classifier.hold_samples_for.into_inner().as_secs(),
