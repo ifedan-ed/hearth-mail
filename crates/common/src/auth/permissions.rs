@@ -301,8 +301,9 @@ impl Default for DefaultPermissions {
             superuser: Default::default(),
         };
 
-        for permission_id in 0..Permission::COUNT {
-            let permission = Permission::from_id(permission_id as u16).unwrap();
+        // Ids are stored, so removed permissions (calendars, contacts, files,
+        // WebDAV) leave gaps that from_id answers with None.
+        for permission in (0..Permission::COUNT).filter_map(|id| Permission::from_id(id as u16)) {
             match permission {
                 Permission::Authenticate
                 | Permission::AuthenticateWithAlias

@@ -158,10 +158,37 @@ async fn report_reschedule() {
         }),
         vec![0xff, 0xff],
     );
+    // Hearth Mail: a calendar alarm task as an inbuxa store may hold one
+    // (type id 3, removed with calendars), with a task row behind it that
+    // nothing can read any more. Both rows go.
+    let calendar_task = SnowflakeIdGenerator::global_id().unwrap();
+    batch.set(
+        ValueClass::TaskQueue(TaskQueueClass::Due {
+            id: calendar_task,
+            due: at,
+        }),
+        3u16.to_be_bytes().to_vec(),
+    );
+    batch.set(
+        ValueClass::TaskQueue(TaskQueueClass::Task { id: calendar_task }),
+        vec![0, 3, 0, 1, 2, 3],
+    );
     test.server.store().write(batch.build_all()).await.unwrap();
     let later = marker_task(&test.server, at + 2).await;
 
     wait_until_run(&test.server, &[dmarc_id.id(), later]).await;
+    assert_eq!(queue_row(&test.server, calendar_task, at).await, None);
+    assert!(
+        test.server
+            .store()
+            .get_value::<RawValue>(ValueKey::from(ValueClass::TaskQueue(
+                TaskQueueClass::Task { id: calendar_task }
+            )))
+            .await
+            .unwrap()
+            .is_none(),
+        "the calendar task's row is removed too"
+    );
     assert!(
         admin
             .registry_get_all::<DmarcInternalReport>()

@@ -84,7 +84,14 @@ pub fn spawn_task_manager(inner: Arc<Inner>) {
     // Spawn workers for each task type
     let mut txs = Vec::with_capacity(TaskType::COUNT);
     for idx in 0..TaskType::COUNT {
-        let task_type = TaskType::from_id(idx as u16).unwrap();
+        // Ids are stored, so the removed calendar task types (3 to 5) leave
+        // gaps. Their slot gets a channel nothing listens to: no row of
+        // theirs is ever dispatched (see `repair_due_rows`).
+        let Some(task_type) = TaskType::from_id(idx as u16) else {
+            let (tx, _) = mpsc::channel::<TaskJob>(1);
+            txs.push(tx);
+            continue;
+        };
         let channel_capacity = match task_type {
             TaskType::IndexDocument | TaskType::UnindexDocument | TaskType::IndexTrace => {
                 std::cmp::max(
@@ -831,6 +838,36 @@ async fn repair_due_rows(server: &Server, rows: Vec<UnreadableDueRow>) -> bool {
     let mut repaired = false;
     for row in rows {
         let UnreadableDueRow { due, id, value } = row;
+        let task_key = ValueClass::TaskQueue(TaskQueueClass::Task { id });
+        let due_key = ValueClass::TaskQueue(TaskQueueClass::Due { id, due });
+
+        // Hearth Mail: calendar alarm and invitation tasks went with
+        // calendars. A store written before keeps their rows, which nothing
+        // can read any more; drop them, once, instead of failing on them at
+        // every scan.
+        if is_removed_task_type(&value) {
+            let mut batch = BatchBuilder::new();
+            batch.clear(due_key).clear(task_key);
+            match server.store().write(batch.build_all()).await {
+                Ok(_) => {
+                    repaired = true;
+                    trc::event!(
+                        TaskManager(TaskManagerEvent::TaskIgnored),
+                        Id = id,
+                        Due = trc::Value::Timestamp(due),
+                        Reason = "Removed a calendar task: calendars aren't served here.",
+                    );
+                }
+                Err(err) => {
+                    trc::error!(
+                        err.id(id)
+                            .details("Failed to remove a calendar task.")
+                            .caused_by(trc::location!())
+                    );
+                }
+            }
+            continue;
+        }
         trc::error!(
             trc::StoreEvent::DataCorruption
                 .into_err()
@@ -845,8 +882,6 @@ async fn repair_due_rows(server: &Server, rows: Vec<UnreadableDueRow>) -> bool {
                 .caused_by(trc::location!())
         );
 
-        let task_key = ValueClass::TaskQueue(TaskQueueClass::Task { id });
-        let due_key = ValueClass::TaskQueue(TaskQueueClass::Due { id, due });
         let task = match server
             .store()
             .get_value::<Task>(ValueKey::from(task_key.clone()))
@@ -909,6 +944,17 @@ async fn repair_due_rows(server: &Server, rows: Vec<UnreadableDueRow>) -> bool {
         }
     }
     repaired
+}
+
+/// Hearth Mail: whether a queue row names one of the calendar task types
+/// (CalendarAlarmEmail, CalendarAlarmNotification, CalendarItipMessage; ids
+/// 3 to 5) that were removed with calendars.
+fn is_removed_task_type(value: &[u8]) -> bool {
+    value
+        .get(..2)
+        .and_then(|b| b.try_into().ok())
+        .map(u16::from_be_bytes)
+        .is_some_and(|id| (3..=5).contains(&id))
 }
 
 /// inbuxa: the task type a report reschedule meant, when a queue row holds

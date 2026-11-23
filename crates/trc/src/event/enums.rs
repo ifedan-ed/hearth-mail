@@ -20,7 +20,9 @@
 // are gauges for Kubernetes alerts (K-C10): queue.oldest-message,
 // cluster.lease-renewed, tls.earliest-expiry.
 // TOTAL_EVENT_COUNT sizes the collector's per-event tables, so it is one
-// more than the highest id; the test below holds it to the variant list
+// more than the highest id. Ids are stored (tracer settings, metric history),
+// so the calendar and WebDAV events Hearth Mail removed leave their ids
+// unused; the tests below allow such gaps and nothing else
 pub const TOTAL_EVENT_COUNT: usize = 665;
 pub const TOTAL_METRIC_COUNT: usize = 372;
 
@@ -1400,7 +1402,7 @@ mod tests {
     #[test]
     fn event_ids_fit_the_collector_tables() {
         let variants = EventType::variants();
-        assert_eq!(variants.len(), TOTAL_EVENT_COUNT);
+        assert!(variants.len() <= TOTAL_EVENT_COUNT);
         let mut ids = variants
             .iter()
             .map(|event| event.to_id())
@@ -1420,7 +1422,7 @@ mod tests {
     #[test]
     fn metric_ids_fit_the_metric_tables() {
         let variants = MetricType::variants();
-        assert_eq!(variants.len(), TOTAL_METRIC_COUNT);
+        assert!(variants.len() <= TOTAL_METRIC_COUNT);
         let mut ids = variants
             .iter()
             .map(|metric| metric.to_id())
