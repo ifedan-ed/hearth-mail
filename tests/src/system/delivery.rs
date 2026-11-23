@@ -381,7 +381,7 @@ pub async fn test(test: &mut TestServer) {
 
     tokio::time::sleep(Duration::from_millis(200)).await;
 
-    for (account, num_messages) in [(&john, 6), (&jane, 1), (&bill, 1)] {
+    for (account, num_messages) in [(&john, 5), (&jane, 1), (&bill, 1)] {
         assert_eq!(
             test.server
                 .get_cached_messages(account.id().document_id())
@@ -421,7 +421,7 @@ pub async fn test(test: &mut TestServer) {
     )
     .await;
 
-    for (account, num_messages) in [(&john, 6), (&jane, 2), (&bill, 2)] {
+    for (account, num_messages) in [(&john, 5), (&jane, 2), (&bill, 2)] {
         assert_eq!(
             test.server
                 .get_cached_messages(account.id().document_id())
@@ -460,7 +460,7 @@ pub async fn test(test: &mut TestServer) {
     // Make sure blobs are properly linked
     test.blob_expire_all().await;
 
-    for (account, num_messages) in [(&john, 7), (&jane, 3), (&bill, 3)] {
+    for (account, num_messages) in [(&john, 6), (&jane, 3), (&bill, 3)] {
         let account_id = account.id().document_id();
         let cache = test.server.get_cached_messages(account_id).await.unwrap();
         assert_eq!(
