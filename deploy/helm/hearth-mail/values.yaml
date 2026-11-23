@@ -1,0 +1,83 @@
+# Hearth Mail on Kubernetes. Read deploy/helm/README.md.
+
+image:
+  # ci/build-image.sh builds hearth-mail:<commit>; push it to your registry.
+  repository: hearth-mail
+  tag: ""          # required
+  pullPolicy: IfNotPresent
+
+# The mail host name (EHLO, the default TLS certificate name, the node's
+# name): a fully qualified name with an MX or A record, e.g. mail.example.org.
+hostname: ""       # required
+
+# The address people and apps use for JMAP and the web pages.
+publicUrl: ""      # required, e.g. https://mail.example.org
+# The admin console's address (allowed to call the API), if any.
+adminUrl: ""
+# "all": JMAP and the API accept passwords as well as tokens.
+httpBasicAuth: ""
+
+# The data store: PostgreSQL. The password comes from a Secret you create.
+postgres:
+  # Its full name, e.g. postgres.db.svc.cluster.local
+  host: ""         # required
+  port: 5432
+  database: inbuxa
+  user: inbuxa
+  passwordSecret:
+    name: ""       # required
+    key: password
+
+# First start only: a recovery administrator (a Secret holding
+# "admin:<password>") and recovery mode, to make the first real
+# administrator. Turn off afterwards.
+recovery:
+  enabled: false
+  adminSecret:
+    name: ""
+    key: recovery-admin
+
+# The spam filter's contacts lookup (Nextcloud through Tidings, or Hearth).
+contactsLookup:
+  url: ""
+  secret:
+    name: ""
+    key: secret
+
+# The mail server's own DNS resolver, a sidecar in the same pod: recursive
+# from the root, DNSSEC-validating, so DNSSEC, DANE and DNS blocklists work
+# whatever the cluster's DNS does. The pod asks it alone; names inside the
+# cluster (the database's, for one) are forwarded to the cluster's DNS.
+unbound:
+  image: klutchell/unbound:v1.26.2@sha256:de8e624f84337bdb2d16540c0b203d5df2a981180421cb50ab4212b67542d8b4
+  seedImage: busybox:1.37@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0
+  # The cluster's DNS service address and domain, for in-cluster names.
+  # Empty clusterDnsIp: looked up from kube-system/kube-dns at install.
+  clusterDnsIp: ""
+  clusterDomain: cluster.local
+  resources:
+    limits: {memory: 128Mi}
+    requests: {cpu: 20m, memory: 64Mi}
+
+# Mail ports, on one Service (LoadBalancer by default: mail needs them on
+# the internet); HTTP (JMAP, API, pages) on a ClusterIP Service for an
+# ingress or a proxy.
+mailService:
+  type: LoadBalancer
+  annotations: {}
+httpService:
+  type: ClusterIP
+
+persistence:
+  # /var/lib/inbuxa (node files; mail itself is in PostgreSQL)
+  size: 1Gi
+  storageClass: ""
+
+resources:
+  limits: {memory: 3Gi}
+  requests: {cpu: 200m, memory: 512Mi}
+
+# The admin console (static pages calling the API from the browser).
+admin:
+  enabled: true
+  image: registry.coffeylabs.org/inbuxa/inbuxa-admin:27.1-rc.24@sha256:7c03ef137f5f0d599d5735f72e5c28ae90851f7906afd206df240a3a86b95afe

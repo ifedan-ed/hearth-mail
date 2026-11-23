@@ -36,7 +36,7 @@ run=(docker run --rm --init
   -v "$root:/src"
   -w /src)
 # Pass the test harness's settings through when they are set.
-for v in STORE COORDINATOR LOG SPAM_RULES_URL RUST_LOG INBUXA_REVISION; do
+for v in STORE COORDINATOR LOG SPAM_RULES_URL RUST_LOG RUST_BACKTRACE INBUXA_REVISION; do
   [ -n "${!v:-}" ] && run+=(-e "$v=${!v}")
 done
 run+=("$image" bash -c 'mkdir -p /target/tmp && exec cargo "$@"' cargo "$@")

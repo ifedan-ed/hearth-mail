@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hm.name" . }}
+  labels: {{- include "hm.labels" . | nindent 4 }}
+spec:
+  # One mail server: a second one needs a coordinator and shared blob
+  # storage (inbuxa's clustering), which this chart doesn't set up.
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {{- include "hm.labels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels: {{- include "hm.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 2000
+        seccompProfile: {type: RuntimeDefault}
+        sysctls:
+          # Mail ports below 1024, and Unbound's 53, without root or
+          # capabilities (a namespaced, safe sysctl)
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
+      # The pod asks Unbound alone (the sidecar below); Unbound forwards the
+      # cluster's own names to the cluster's DNS.
+      dnsPolicy: None
+      dnsConfig:
+        nameservers: [127.0.0.1]
+        searches:
+          - {{ .Release.Namespace }}.svc.{{ .Values.unbound.clusterDomain }}
+          - svc.{{ .Values.unbound.clusterDomain }}
+          - {{ .Values.unbound.clusterDomain }}
+        options:
+          # Mail looks up many outside names (MX, TLSA, blocklists): try
+          # each as given first. Give in-cluster hosts their full name.
+          - {name: ndots, value: "1"}
+      initContainers:
+        # Seeds Unbound's root key once per pod; Unbound updates it after.
+        - name: unbound-seed
+          image: {{ .Values.unbound.seedImage }}
+          command: ["sh", "-c", "[ -s /var/lib/unbound/root.key ] || cp /seed/root.seed /var/lib/unbound/root.key"]
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 102
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: unbound-data, mountPath: /var/lib/unbound}
+            - {name: config, mountPath: /seed/root.seed, subPath: root.seed}
+        # A native sidecar (restartPolicy: Always): up before the server
+        # starts, and kept for the pod's life.
+        - name: unbound
+          image: {{ .Values.unbound.image }}
+          restartPolicy: Always
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 102
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: unbound-data, mountPath: /var/lib/unbound}
+            - {name: config, mountPath: /etc/unbound/unbound.conf, subPath: unbound.conf}
+          startupProbe:
+            exec: {command: ["drill-hc", "@127.0.0.1", "nlnetlabs.nl"]}
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            exec: {command: ["drill-hc", "@127.0.0.1", "nlnetlabs.nl"]}
+            periodSeconds: 30
+            timeoutSeconds: 10
+          resources: {{- toYaml .Values.unbound.resources | nindent 12 }}
+      containers:
+        - name: server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["--config", "/etc/inbuxa/config.json"]
+          env:
+            # Not the pod's name: other servers refuse an EHLO without a
+            # domain, and the node keeps one name across pods.
+            - {name: INBUXA_HOSTNAME, value: {{ .Values.hostname | quote }}}
+            - {name: INBUXA_PUBLIC_URL, value: {{ .Values.publicUrl | quote }}}
+            {{- with .Values.adminUrl }}
+            - {name: INBUXA_ADMIN_URL, value: {{ . | quote }}}
+            {{- end }}
+            {{- with .Values.httpBasicAuth }}
+            - {name: INBUXA_HTTP_BASIC_AUTH, value: {{ . | quote }}}
+            {{- end }}
+            {{- if .Values.recovery.enabled }}
+            - {name: INBUXA_RECOVERY_MODE, value: "1"}
+            - {name: INBUXA_RECOVERY_ADMIN_FILE, value: /run/secrets/recovery/{{ .Values.recovery.adminSecret.key }}}
+            {{- end }}
+            {{- if .Values.contactsLookup.url }}
+            - {name: INBUXA_CONTACTS_LOOKUP_URL, value: {{ .Values.contactsLookup.url | quote }}}
+            - {name: INBUXA_CONTACTS_LOOKUP_SECRET_FILE, value: /run/secrets/contacts/{{ .Values.contactsLookup.secret.key }}}
+            {{- end }}
+          ports:
+            - {name: smtp, containerPort: 25}
+            - {name: submissions, containerPort: 465}
+            - {name: submission, containerPort: 587}
+            - {name: imap, containerPort: 143}
+            - {name: imaps, containerPort: 993}
+            - {name: pop3s, containerPort: 995}
+            - {name: sieve, containerPort: 4190}
+            - {name: https, containerPort: 443}
+            - {name: http, containerPort: 8080}
+          securityContext:
+            runAsUser: 2000
+            runAsGroup: 2000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          readinessProbe:
+            httpGet: {path: /healthz/ready, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz/live, port: http}
+            periodSeconds: 30
+            initialDelaySeconds: 30
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - {name: etc, mountPath: /etc/inbuxa}
+            - {name: config, mountPath: /etc/inbuxa/config.json, subPath: config.json, readOnly: true}
+            - {name: data, mountPath: /var/lib/inbuxa}
+            - {name: tmp, mountPath: /tmp}
+            - {name: postgres, mountPath: /run/secrets/postgres, readOnly: true}
+            {{- if .Values.recovery.enabled }}
+            - {name: recovery, mountPath: /run/secrets/recovery, readOnly: true}
+            {{- end }}
+            {{- if .Values.contactsLookup.url }}
+            - {name: contacts, mountPath: /run/secrets/contacts, readOnly: true}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap: {name: {{ include "hm.name" . }}}
+        - {name: etc, emptyDir: {}}
+        - {name: tmp, emptyDir: {sizeLimit: 256Mi}}
+        - {name: unbound-data, emptyDir: {}}
+        - name: data
+          persistentVolumeClaim: {claimName: {{ include "hm.name" . }}}
+        - name: postgres
+          secret: {secretName: {{ .Values.postgres.passwordSecret.name }}}
+        {{- if .Values.recovery.enabled }}
+        - name: recovery
+          secret: {secretName: {{ required "recovery.adminSecret.name" .Values.recovery.adminSecret.name }}}
+        {{- end }}
+        {{- if .Values.contactsLookup.url }}
+        - name: contacts
+          secret: {secretName: {{ required "contactsLookup.secret.name" .Values.contactsLookup.secret.name }}}
+        {{- end }}

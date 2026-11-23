@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hm.name" . }}-mail
+  labels: {{- include "hm.labels" . | nindent 4 }}
+  {{- with .Values.mailService.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.mailService.type }}
+  {{- if ne .Values.mailService.type "ClusterIP" }}
+  # Keep senders' real addresses (SPF, blocklists, logs)
+  externalTrafficPolicy: Local
+  {{- end }}
+  selector: {{- include "hm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+  ports:
+    {{- range list "smtp:25" "submissions:465" "submission:587" "imap:143" "imaps:993" "pop3s:995" "sieve:4190" "https:443" }}
+    {{- $p := splitList ":" . }}
+    - {name: {{ index $p 0 }}, port: {{ index $p 1 }}, targetPort: {{ index $p 0 }}}
+    {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hm.name" . }}-http
+  labels: {{- include "hm.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.httpService.type }}
+  selector: {{- include "hm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "hm.name" . }}
+  labels: {{- include "hm.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: {{ .Values.persistence.size }}}}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- if .Values.admin.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hm.name" . }}-admin
+  labels: {{- include "hm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "hm.labels" . | nindent 6 }}
+      app.kubernetes.io/component: admin
+  template:
+    metadata:
+      labels: {{- include "hm.labels" . | nindent 8 }}
+        app.kubernetes.io/component: admin
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 101, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: admin
+          image: {{ .Values.admin.image }}
+          env:
+            - {name: API_BASE_URL, value: {{ .Values.publicUrl | quote }}}
+          ports: [{name: http, containerPort: 8080}]
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources: {limits: {memory: 128Mi}, requests: {cpu: 10m, memory: 32Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hm.name" . }}-admin
+  labels: {{- include "hm.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "hm.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+{{- end }}

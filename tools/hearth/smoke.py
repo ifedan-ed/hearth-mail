@@ -35,6 +35,13 @@ import urllib.request
 from email.message import EmailMessage
 
 DIR = os.environ.get('HM_PROOF_DIR', '/srv/hearth-mail-proof')
+# The instance's containers and its Postgres host as the server sees it:
+# throwaway.sh's by default, or the compose example's (deploy/compose).
+SERVER = os.environ.get('HM_PROOF_SERVER', 'hmproof-server')
+PG_HOST = os.environ.get('HM_PROOF_PG_HOST', 'hmproof-pg')
+# HM_PROOF_DNS=1: also check DNSSEC and DANE through the server's resolver
+# (needs the internet: it asks the posteo.de MX for its TLSA records).
+CHECK_DNS = os.environ.get('HM_PROOF_DNS') == '1'
 HTTP = 'http://127.0.0.1:28080'
 CONSOLE = 'http://127.0.0.1:28081'
 HOST = '127.0.0.1'
@@ -106,17 +113,29 @@ def docker(*args):
 
 # --------------------------------------------------------------- setup ----
 
+def recovery_admin():
+    """The bootstrap administrator: from the file throwaway.sh makes, or
+    the one-time password a server without one prints at its first start."""
+    path = f'{DIR}/recovery-admin'
+    if os.path.exists(path):
+        return open(path).read().strip().split(':', 1)
+    for line in docker('logs', SERVER).stderr.splitlines():
+        if line.strip().startswith('password:'):
+            return ['admin', line.split(':', 1)[1].strip()]
+    sys.exit('no recovery administrator found')
+
+
 def setup():
-    recovery = open(f'{DIR}/recovery-admin').read().strip().split(':', 1)
-    pg_secret = open(f'{DIR}/pg-password').read().strip()
     if not wait_http():
-        sys.exit('server did not answer:\n' + docker('logs', '--tail', '40', 'hmproof-server').stderr)
+        sys.exit('server did not answer:\n' + docker('logs', '--tail', '40', SERVER).stderr)
+    recovery = recovery_admin()
+    pg_secret = open(os.environ.get('HM_PROOF_PG_SECRET', f'{DIR}/pg-password')).read().strip()
     got = one(recovery, 'x:Bootstrap/get', {'ids': None})
     sid = got[1]['list'][0]['id']
     res = one(recovery, 'x:Bootstrap/set', {'update': {sid: {
         'serverHostname': 'mail.alpha.test', 'defaultDomain': 'alpha.test',
         'requestTlsCertificate': False, 'generateDkimKeys': True,
-        'dataStore': {'@type': 'PostgreSql', 'host': 'hmproof-pg', 'port': 5432,
+        'dataStore': {'@type': 'PostgreSql', 'host': PG_HOST, 'port': 5432,
                       'database': 'inbuxa', 'authUsername': 'inbuxa',
                       'authSecret': {'@type': 'Value', 'secret': pg_secret}},
         'tracer': {'@type': 'Stdout', 'level': 'info', 'ansi': False},
@@ -126,7 +145,7 @@ def setup():
         sys.exit('bootstrap failed: ' + json.dumps(res)[:500])
     admin = (upd['username'], upd['secret'])
     check(True, 'bootstrap into Postgres (the live store type)')
-    docker('restart', 'hmproof-server')
+    docker('restart', SERVER)
     if not wait_http():
         sys.exit('server did not come back after bootstrap')
     time.sleep(3)
@@ -160,7 +179,7 @@ def setup():
     for name, port, protocol in (('submission', 587, 'smtp'), ('imap', 143, 'imap')):
         create('NetworkListener', {'name': name, 'bind': {f'[::]:{port}': True},
                                    'protocol': protocol, 'tlsImplicit': False})
-    docker('restart', 'hmproof-server')
+    docker('restart', SERVER)
     if not wait_http():
         sys.exit('server did not come back after adding listeners')
     time.sleep(3)
@@ -442,6 +461,102 @@ def jmap_checks(users):
           f'{status} {body[:200]!r}')
 
 
+def dns_checks(admin):
+    """DNSSEC and DANE through the server's own resolver: no "cannot
+    validate DNSSEC" at start, and the console's delivery test finds and
+    verifies posteo.de's TLSA records (its zone is signed)."""
+    logs = docker('logs', SERVER).stderr
+    check('cannot validate DNSSEC' not in logs and 'DANE has been disabled' not in logs,
+          "the server's resolver validates DNSSEC (DANE stays on)")
+    req = urllib.request.Request(HTTP + '/api/live/delivery/posteo.de?timeout=20')
+    req.add_header('Authorization', 'Basic ' + base64.b64encode(f'{admin[0]}:{admin[1]}'.encode()).decode())
+    events = b''
+    try:
+        with urllib.request.urlopen(req, timeout=40) as resp:
+            for line in resp:
+                events += line
+                if b'"type":"completed"' in line or len(events) > 200000:
+                    break
+    except Exception as err:
+        events += repr(err).encode()
+    text = events.decode(errors='replace')
+    check('"tlsaLookupSuccess"' in text and '"daneVerifySuccess"' in text,
+          'delivery test to posteo.de: TLSA found and DANE verified', text[-600:])
+
+
+def itip_checks(users):
+    """The $itip keyword: a delivered invitation carries it, plain mail
+    doesn't, IMAP and JMAP both find it, and a keyword search over a few
+    thousand messages stays cheap (docs/integration.md, "The $itip
+    keyword")."""
+    alice, carol = users['alice'], users['carol']
+    invite = EmailMessage()
+    invite['From'], invite['To'], invite['Subject'] = carol[0], alice[0], 'Invitation: planning'
+    invite['Message-ID'] = f'<{secrets.token_hex(8)}@test.example>'
+    invite.set_content('You are invited.')
+    invite.add_attachment(
+        'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//test//EN\r\nMETHOD:REQUEST\r\n'
+        'BEGIN:VEVENT\r\nUID:planning-1@test.example\r\nDTSTAMP:20261123T100000Z\r\n'
+        'DTSTART:20261201T100000Z\r\nDTEND:20261201T110000Z\r\nSUMMARY:Planning\r\n'
+        f'ORGANIZER:mailto:{carol[0]}\r\nATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:{alice[0]}\r\n'
+        'END:VEVENT\r\nEND:VCALENDAR\r\n',
+        subtype='calendar', params={'method': 'REQUEST'}, disposition='inline')
+    with smtplib.SMTP_SSL(HOST, PORTS['submissions'], context=tls(), timeout=30) as s:
+        s.login(*carol)
+        s.send_message(invite)
+    # A plain .ics without a method is not an invitation
+    plain = message(carol[0], alice[0], 'Calendar file, no method')
+    plain.add_attachment('BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n', subtype='calendar',
+                         filename='event.ics')
+    with smtplib.SMTP_SSL(HOST, PORTS['submissions'], context=tls(), timeout=30) as s:
+        s.login(*carol)
+        s.send_message(plain)
+
+    def search():
+        with imaplib.IMAP4_SSL(HOST, PORTS['imaps'], ssl_context=tls()) as m:
+            m.login(*alice)
+            m.select('INBOX', readonly=True)
+            _, data = m.search(None, 'KEYWORD', '$itip')
+            hits = data[0].split()
+            subjects = []
+            for n in hits:
+                _, d = m.fetch(n, '(FLAGS BODY.PEEK[HEADER.FIELDS (SUBJECT)])')
+                subjects.append(d[0][0].decode() + d[0][1].decode(errors='replace'))
+            return hits, subjects
+    wait_for(lambda: imap_count(alice) >= 2 and len(search()[0]) >= 1)
+    hits, subjects = search()
+    check(len(hits) == 1 and 'Invitation: planning' in subjects[0] and '$itip' in subjects[0],
+          'an invitation is tagged $itip (IMAP SEARCH KEYWORD, FLAGS); a plain .ics is not',
+          str(subjects))
+
+    status, body = http('GET', '/jmap/session', auth=alice)
+    account = json.loads(body)['primaryAccounts']['urn:ietf:params:jmap:mail']
+    query = [['Email/query', {'accountId': account, 'filter': {'hasKeyword': '$itip'}}, 'q']]
+    r = jmap(alice, query)
+    check(len(r[0][1]['ids']) == 1, 'JMAP Email/query hasKeyword $itip', str(r[0][1])[:200])
+
+    # Cost: 3,000 more messages (30 of them tagged) in another folder, then
+    # the same query, timed
+    with imaplib.IMAP4_SSL(HOST, PORTS['imaps'], ssl_context=tls()) as m:
+        m.login(*alice)
+        m.create('Bulk')
+        for i in range(3000):
+            flags = '($itip)' if i % 100 == 0 else '()'
+            m.append('Bulk', flags, None, (f'From: x{i}@outside.example\r\nTo: {alice[0]}\r\n'
+                                           f'Subject: bulk {i}\r\n\r\nBody {i}\r\n').encode())
+    timings = []
+    for _ in range(7):
+        t0 = time.perf_counter()
+        r = jmap(alice, query)
+        timings.append((time.perf_counter() - t0) * 1000)
+    timings.sort()
+    n = len(r[0][1]['ids'])
+    print(f'      $itip query over 3,002 messages: {n} hits, median {timings[3]:.1f} ms, '
+          f'best {timings[0]:.1f} ms (the whole HTTP request)')
+    check(n == 31 and timings[3] < 100, 'the $itip search stays cheap (median under 100 ms)',
+          f'{n} hits, {timings}')
+
+
 def removed_checks(users):
     for path in ('/dav/cal/', '/dav/card/', '/dav/file/', '/.well-known/caldav',
                  '/.well-known/carddav', '/calendar/rsvp'):
@@ -482,8 +597,11 @@ def main():
     sieve_checks(users)
     spam_checks(users)
     jmap_checks(users)
+    itip_checks(users)
     removed_checks(users)
     admin_checks(admin, users)
+    if CHECK_DNS:
+        dns_checks(admin)
     # For the console screenshot (tools/hearth/console-shot.mjs), kept in the
     # proof directory only, which `throwaway.sh down` removes.
     with open(f'{DIR}/admin', 'w') as f:

@@ -1,0 +1,134 @@
+# Hearth Mail with Docker Compose: the mail server, its PostgreSQL store,
+# its own validating DNS resolver (Unbound) and the admin console.
+# Read deploy/compose/README.md first; settings are in .env (see .env.example).
+name: ${HEARTH_MAIL_PROJECT:-hearth-mail}
+
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inbuxa
+      POSTGRES_USER: inbuxa
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg-password
+    volumes:
+      - pg:/var/lib/postgresql/data
+      - ./secrets/pg-password:/run/secrets/pg-password:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inbuxa -d inbuxa"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    networks: [default]
+
+  # The mail server's DNS resolver: recursive from the root, DNSSEC-validating,
+  # with a self-updating root key. The server is pointed at it with `dns:`
+  # below, so DNSSEC, DANE and the DNS blocklists work without depending on
+  # the host's or Docker's resolver (README: "Why Unbound").
+  unbound:
+    image: klutchell/unbound:v1.26.2@sha256:de8e624f84337bdb2d16540c0b203d5df2a981180421cb50ab4212b67542d8b4
+    restart: unless-stopped
+    user: "101:102"
+    # Port 53 without root or capabilities.
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: "53"
+    volumes:
+      - ./unbound/unbound.conf:/etc/unbound/unbound.conf:ro
+      # A named volume: on first start Docker copies the image's
+      # /var/unbound (root hints, seed root key) into it.
+      - unbound:/var/unbound
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    pids_limit: 64
+    healthcheck:
+      # Resolves and validates a signed name through itself.
+      test: ["CMD", "drill-hc", "@127.0.0.1", "nlnetlabs.nl"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      dns:
+        ipv4_address: "${HEARTH_MAIL_DNS_IP:-172.30.53.53}"
+
+  server:
+    image: ${HEARTH_MAIL_IMAGE:?set HEARTH_MAIL_IMAGE in .env}
+    hostname: hearth-mail
+    init: true
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      unbound:
+        condition: service_healthy
+    # Every name the server looks up goes to Unbound (Docker's own resolver
+    # still answers the other containers' names and forwards the rest).
+    dns:
+      - "${HEARTH_MAIL_DNS_IP:-172.30.53.53}"
+    environment:
+      # The mail host name: EHLO, the default certificate name, the node.
+      INBUXA_HOSTNAME: ${HEARTH_MAIL_HOSTNAME:?set HEARTH_MAIL_HOSTNAME in .env}
+      INBUXA_PUBLIC_URL: ${HEARTH_MAIL_PUBLIC_URL:?set HEARTH_MAIL_PUBLIC_URL in .env}
+      INBUXA_ADMIN_URL: ${HEARTH_MAIL_ADMIN_URL:-}
+      # "all" lets JMAP and the API take passwords too (webmail and tools
+      # that can't use OAuth); unset, they take tokens only.
+      INBUXA_HTTP_BASIC_AUTH: ${HEARTH_MAIL_HTTP_BASIC_AUTH:-}
+      # Optional: the spam filter's contacts lookup (README, "Contacts").
+      # INBUXA_CONTACTS_LOOKUP_URL: https://cloud.example.org/apps/tidings/api/contacts/known
+      # INBUXA_CONTACTS_LOOKUP_SECRET_FILE: /run/secrets/contacts-lookup-secret
+    volumes:
+      - ./etc:/etc/inbuxa
+      - ./data:/var/lib/inbuxa
+      # The contacts lookup's secret, with the two settings above:
+      # - ./secrets/contacts-lookup-secret:/run/secrets/contacts-lookup-secret:ro
+    ports:
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_SMTP:-25}:25"
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_SUBMISSIONS:-465}:465"
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_SUBMISSION:-587}:587"
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_IMAP:-143}:143"
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_IMAPS:-993}:993"
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_POP3S:-995}:995"
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_SIEVE:-4190}:4190"
+      - "${HEARTH_MAIL_BIND:-0.0.0.0}:${HEARTH_MAIL_PORT_HTTPS:-443}:443"
+      # Plain HTTP, for a reverse proxy on the same host.
+      - "127.0.0.1:${HEARTH_MAIL_PORT_HTTP:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,uid=2000,gid=2000
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 3g
+    pids_limit: 512
+    networks: [default, dns]
+
+  # The admin console: static pages that call the server's API from the
+  # browser. Put it behind the same reverse proxy, on its own host name.
+  admin:
+    image: registry.coffeylabs.org/inbuxa/inbuxa-admin:27.1-rc.24@sha256:7c03ef137f5f0d599d5735f72e5c28ae90851f7906afd206df240a3a86b95afe
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: ${HEARTH_MAIL_PUBLIC_URL}
+    ports:
+      - "127.0.0.1:${HEARTH_MAIL_PORT_ADMIN:-8081}:8080"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    networks: [default]
+
+volumes:
+  pg:
+  unbound:
+
+networks:
+  default:
+    enable_ipv6: true
+  # Unbound's network, with a fixed subnet so its address doesn't move. Not
+  # internal: Unbound reaches the root and other name servers through it.
+  dns:
+    ipam:
+      config:
+        - subnet: "${HEARTH_MAIL_DNS_SUBNET:-172.30.53.0/24}"

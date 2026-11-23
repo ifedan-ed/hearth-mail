@@ -1,0 +1,91 @@
+{{- if not .Values.image.tag }}{{ fail "image.tag is required" }}{{ end }}
+{{- if not (contains "." .Values.hostname) }}{{ fail "hostname is required: a fully qualified name, e.g. mail.example.org" }}{{ end }}
+{{- if not .Values.publicUrl }}{{ fail "publicUrl is required" }}{{ end }}
+{{- if not .Values.postgres.host }}{{ fail "postgres.host is required" }}{{ end }}
+{{- if not .Values.postgres.passwordSecret.name }}{{ fail "postgres.passwordSecret.name is required" }}{{ end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hm.name" . }}
+  labels: {{- include "hm.labels" . | nindent 4 }}
+data:
+  # The data store. The password is read from the mounted Secret, never put
+  # here. Mounted read-only, so the server treats it as managed elsewhere.
+  config.json: |
+    {"@type": "PostgreSql",
+     "host": {{ .Values.postgres.host | quote }},
+     "port": {{ .Values.postgres.port }},
+     "database": {{ .Values.postgres.database | quote }},
+     "authUsername": {{ .Values.postgres.user | quote }},
+     "authSecret": {"@type": "File", "filePath": "/run/secrets/postgres/{{ .Values.postgres.passwordSecret.key }}"}}
+  # A seed for the root trust anchor (the root's two KSKs, IANA's published
+  # keys). Unbound keeps it current from there on (RFC 5011).
+  root.seed: |
+{{ .Files.Get "files/root.seed" | indent 4 }}
+  # Unbound as the pod's only resolver (deploy/compose/unbound/unbound.conf
+  # with the sidecar's differences: loopback only, in-cluster names
+  # forwarded to the cluster's DNS).
+  unbound.conf: |
+    server:
+        do-daemonize: no
+        username: ""
+        chroot: ""
+        pidfile: ""
+        logfile: ""
+        use-syslog: no
+        directory: "/var/lib/unbound"
+        verbosity: 1
+        val-log-level: 2
+        log-servfail: yes
+        interface: 127.0.0.1
+        interface: ::1
+        port: 53
+        access-control: 0.0.0.0/0 refuse
+        access-control: ::0/0 refuse
+        access-control: 127.0.0.0/8 allow
+        access-control: ::1 allow
+        do-ip4: yes
+        do-ip6: yes
+        prefer-ip6: no
+        do-udp: yes
+        do-tcp: yes
+        root-hints: "/var/unbound/root.hints"
+        edns-buffer-size: 1232
+        auto-trust-anchor-file: "/var/lib/unbound/root.key"
+        harden-dnssec-stripped: yes
+        harden-below-nxdomain: yes
+        harden-glue: yes
+        harden-referral-path: no
+        harden-algo-downgrade: yes
+        aggressive-nsec: yes
+        qname-minimisation: yes
+        qname-minimisation-strict: no
+        use-caps-for-id: no
+        hide-identity: yes
+        hide-version: yes
+        num-threads: 1
+        msg-cache-size: 16m
+        rrset-cache-size: 32m
+        key-cache-size: 4m
+        neg-cache-size: 2m
+        cache-min-ttl: 0
+        cache-max-ttl: 86400
+        prefetch: yes
+        prefetch-key: yes
+        serve-expired: no
+        outgoing-range: 1024
+        num-queries-per-thread: 512
+        so-reuseport: no
+        private-address: 10.0.0.0/8
+        private-address: 172.16.0.0/12
+        private-address: 192.168.0.0/16
+        private-address: 169.254.0.0/16
+        private-address: fd00::/8
+        private-address: fe80::/10
+        # In-cluster names: unsigned, private, and the cluster DNS's to answer.
+        domain-insecure: {{ .Values.unbound.clusterDomain | quote }}
+        private-domain: {{ .Values.unbound.clusterDomain | quote }}
+        local-zone: {{ .Values.unbound.clusterDomain | quote }} nodefault
+    forward-zone:
+        name: {{ .Values.unbound.clusterDomain | quote }}
+        forward-addr: {{ include "hm.clusterDnsIp" . }}

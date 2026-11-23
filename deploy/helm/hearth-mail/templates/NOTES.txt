@@ -1,0 +1,10 @@
+Hearth Mail {{ .Chart.AppVersion }} is starting as {{ include "hm.name" . }}.
+{{- if .Values.recovery.enabled }}
+
+Recovery mode is on: sign in to the API with the recovery administrator,
+make the first administrator, then install again with recovery.enabled=false.
+{{- end }}
+
+Mail ports: Service {{ include "hm.name" . }}-mail ({{ .Values.mailService.type }}).
+JMAP, the API and the pages: Service {{ include "hm.name" . }}-http, port 8080.
+DNS: the Unbound sidecar (see deploy/helm/README.md).

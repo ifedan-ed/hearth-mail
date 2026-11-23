@@ -8,6 +8,7 @@ run.sh
 .*
 !.gitignore
 !.forgejo
+!deploy/compose/.env.example
 !.gitattributes
 !.github
 !.gitlab-ci.yml
@@ -21,3 +22,9 @@ tools/fork/cutover-rehearsal/phase2_notes.json
 # Python's bytecode cache, wherever the tools run from.
 __pycache__/
 /dist
+
+# A deployment's own settings and secrets, never the example's
+/deploy/compose/.env
+/deploy/compose/secrets/
+/deploy/compose/etc/
+/deploy/compose/data/
