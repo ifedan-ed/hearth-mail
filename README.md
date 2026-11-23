@@ -1,108 +1,91 @@
-<p align="center">
-  <img src="./img/brand/inbuxa-lockup-light.svg" alt="inbuxa" height="140">
-</p>
+# Hearth Mail
 
-<h3 align="center">
-  Self-hosted mail, calendars, contacts and files, enterprise features included
-</h3>
+The mail server of the Hearth suite. It runs on its own, for any standard
+mail client, and works with Nextcloud and Hearth for contacts, calendars and
+files.
 
-<p align="center">
-  <a href="LICENSES/AGPL-3.0-only.txt"><img alt="License: AGPL-3.0-only" src="https://img.shields.io/badge/license-AGPL--3.0--only-2dd4bf?style=flat-square"></a>
-  <a href="https://git.coffeylabs.org/inbuxa/inbuxa-server/releases/latest"><img alt="Latest release" src="https://img.shields.io/gitea/v/release/inbuxa/inbuxa-server?gitea_url=https%3A%2F%2Fgit.coffeylabs.org&label=release&color=2dd4bf&style=flat-square"></a>
-  <a href="https://docs.inbuxa.org/install/server/"><img alt="Documentation: docs.inbuxa.org" src="https://img.shields.io/badge/docs-docs.inbuxa.org-0ea5e9?style=flat-square"></a>
-  <a href="https://community.coffeylabs.org/c/inbuxa/5"><img alt="Forum: community.coffeylabs.org" src="https://img.shields.io/badge/forum-community.coffeylabs.org-0f766e?style=flat-square"></a>
-  <a href="https://discord.gg/nqcY4TKfAn"><img alt="Chat on Discord" src="https://img.shields.io/discord/1523538164084637797?label=discord&logo=discord&logoColor=white&color=5865f2&style=flat-square"></a>
-</p>
+Hearth Mail is a fork of [inbuxa](https://git.coffeylabs.org/inbuxa/inbuxa-server)
+27.1-rc.39, itself a fork of Stalwart, with calendars, contacts and files
+taken out. It is maintained on its own from that point.
 
----
+## What it does
 
-> [!NOTE]
-> Development happens on [git.coffeylabs.org/inbuxa/inbuxa-server](https://git.coffeylabs.org/inbuxa/inbuxa-server); the copy on GitHub is a read-only mirror.
-> Report issues at **[git.coffeylabs.org/inbuxa/inbuxa-server/issues](https://git.coffeylabs.org/inbuxa/inbuxa-server/issues)**, join discussions at **[community.coffeylabs.org](https://community.coffeylabs.org)**, or chat on **[Discord](https://discord.gg/nqcY4TKfAn)**.
+- JMAP for mail, with push (EventSource, WebSocket, Web Push).
+- IMAP4rev2 and IMAP4rev1, POP3.
+- SMTP: receiving on port 25, submission on 465 and 587, outbound delivery
+  with queues, DANE, MTA-STS and REQUIRETLS.
+- DKIM, SPF, DMARC and ARC checks and signing; DMARC and TLS reports, sent
+  and received.
+- Sieve filters and vacation replies, managed over ManageSieve or JMAP.
+- A spam filter with rules, DNS blocklists and a learned model.
+- Many users, groups, shared mailboxes, domains and tenants; mailing lists
+  and masked addresses.
+- Sign-in with passwords, app passwords, passkeys, OAuth and OpenID
+  Connect providers.
+- Undelete for mail and Sieve scripts, legal holds, account locks with
+  delegates, mail rules and data loss prevention, an audit log.
+- Automatic certificates (ACME) and DNS records for its domains.
+- A management API, used by the admin console and by scripts.
 
-**inbuxa** is a self-hosted mail and collaboration server from Coffey Labs. It
-speaks JMAP, IMAP, POP3, SMTP, CalDAV, CardDAV and WebDAV from one Rust binary.
-Project site: [inbuxa.org](https://inbuxa.org). Documentation:
-[docs.inbuxa.org](https://docs.inbuxa.org).
+What it does not do: calendars (CalDAV, JMAP Calendars), contacts (CardDAV,
+JMAP Contacts) and files (WebDAV, JMAP FileNode). Use Nextcloud or Hearth
+for those; docs/integration.md shows how they fit together.
 
-The server is one part of a suite. [inbuxa Admin](https://git.coffeylabs.org/inbuxa/inbuxa-admin)
-is the console that runs it, and [inbuxa Webmail](https://git.coffeylabs.org/inbuxa/inbuxa-webmail)
-is where people read their mail. Each is its own program, so the mail host
-doesn't have to serve a web front end at all.
+## Mail clients
 
-## What's included
+Any client that speaks IMAP and SMTP works: Thunderbird, Apple Mail,
+Outlook, K-9 and the other phone apps. Thunderbird and Outlook find the
+settings by themselves from the email address (autoconfig, autodiscover and
+SRV records). JMAP clients use `https://<host>/.well-known/jmap`.
 
-There is one edition and no paid tier. Nothing checks a license key.
+## Running
 
-- **For organizations:** tenants, SCIM provisioning, single sign-on, per-domain
-  directories and branding.
-- **For compliance:** audit log, [legal holds](https://docs.inbuxa.org/run/legal-holds/),
-  data loss prevention, mail flow rules and journaling.
-- **For people:** masked addresses, undelete, shared mailboxes, calendars,
-  contacts and files.
-- **For operators:** monitoring and alerts, [clustering](https://docs.inbuxa.org/run/clustering/)
-  and scale-out storage, plus [inbuxa Relay](https://docs.inbuxa.org/run/relay/)
-  for a server that can't take mail from the internet directly.
-- **Local AI, if you want it:** a model you run yourself. It stays off until you
-  turn it on.
+The container image runs as user 2000 and works with a read-only root:
 
-## Where it's going
+    docker run -d --name hearth-mail --read-only --tmpfs /tmp \
+      -v "$PWD/etc:/etc/inbuxa" -v "$PWD/data:/var/lib/inbuxa" \
+      -p 25:25 -p 465:465 -p 587:587 -p 993:993 -p 995:995 -p 4190:4190 \
+      -p 443:443 -p 8080:8080 \
+      hearth-mail:<version>
 
-**inbuxa** is its own project now, and it's built to stay that way.
+Settings are read from `INBUXA_*` environment variables and from the store
+named in `/etc/inbuxa/config.json`. The first start without a store opens a
+setup page on port 8080.
 
-- **Its own release line.** Two series a year, in January and July, with one
-  version number across the suite. 27.1 ships in January 2027, and its release
-  candidates are out now. See [Versions and upgrades](https://docs.inbuxa.org/versions/).
-- **Its own data layout.** From 27.1 the store's format belongs to **inbuxa** and
-  changes when **inbuxa** needs it to.
-- **Its own security work.** Fixes are written and released here, under a
-  published support window. See [SECURITY.md](./SECURITY.md).
-- **Your way out stays open.** inbuxa-migrate brings accounts in from other mail
-  servers. It also writes them back out as plain files, in a
-  [published layout](https://coffeylabs.org/specs/account-export/) that any
-  software can read. See [Leaving inbuxa](https://docs.inbuxa.org/install/accounts/#leaving).
-- **Open standards.** We work on JMAP at the IETF. Our undelete work is now part
-  of [JMAP Object History](https://datatracker.ietf.org/doc/draft-ietf-jmap-object-history/),
-  a working group draft we co-author.
-- **Source you can check.** A running server names the exact source of its build
-  at `/.well-known/source`.
-
-## Where it came from
-
-**inbuxa** started as a fork of Stalwart.
-[Where the code comes from](https://docs.inbuxa.org/provenance/) has the full
-record. Moving from a Stalwart 0.16 server is an export and an import, covered
-in [Coming from Stalwart](https://docs.inbuxa.org/install/migrating/).
+The admin console is a separate program,
+[inbuxa Admin](https://git.coffeylabs.org/inbuxa/inbuxa-admin). It builds its
+pages from the server's schema, so it shows only what Hearth Mail does.
 
 ## Building
 
-```bash
-cargo build --release -p inbuxa          # the binary is target/release/inbuxa
-docker build -t inbuxa .                 # or the container image
-```
+Builds run in a pinned toolchain container, with memory and CPU capped:
 
-Settings are read from `INBUXA_*` environment variables. New installs keep
-their data in `/var/lib/inbuxa` and logs in `/var/log/inbuxa`. Existing installs
-keep the paths their configuration already names, so none of their data moves.
+    ci/cargo.sh build -p inbuxa --locked        # a dev build
+    ci/build-image.sh                           # the release image
+
+Tests:
+
+    ci/cargo.sh test --workspace --exclude tests --locked --features smtp/test_mode
+    STORE=RocksDb ci/cargo.sh test -p tests --locked -- --test-threads=1
+
+docs/building.md has the details.
+
+## Documentation
+
+- docs/integration.md: contacts, calendars, files and administration with
+  Nextcloud and Hearth.
+- docs/building.md: builds, images, tests and CI.
+- docs/spec/: inbuxa's own feature specifications, kept for the features
+  that remain.
 
 ## License and credits
 
-**inbuxa** is free software under the [GNU Affero General Public License,
-version 3](./LICENSES/AGPL-3.0-only.txt). It is a Coffey Labs project.
+Free software under the [GNU Affero General Public License, version
+3](./LICENSES/AGPL-3.0-only.txt).
 
-It started as a fork of Stalwart, copyright © Stalwart Labs LLC, **modified by
-Coffey Labs in 2026**. Upstream's copyright notices are kept on every file
-they cover, and every upstream file changed for **inbuxa** says so in its header,
-under the notice it came with. Stalwart's files are dual-licensed
-AGPL-3.0-only or Stalwart's Enterprise License, and **inbuxa** takes them under
-the AGPL-3.0 only. A few of those files also carry code from other projects
-under MIT or BSD licenses, which stays under those licenses;
-[THIRD-PARTY.md](./THIRD-PARTY.md) lists it with its notices. Stalwart is a
-trademark of Stalwart Labs LLC. **inbuxa** is not affiliated with or endorsed by
-Stalwart Labs.
-
-`LICENSES/LicenseRef-SEL.txt` (and its copy in `vendor/sieve-rs/`) is there
-only because the inherited headers name it as upstream's other option, and
-a license a header names has to be in `LICENSES/`. It isn't a license for
-**inbuxa** and grants nothing: **inbuxa** is distributed under the
-AGPL-3.0-only.
+Hearth Mail is a fork of inbuxa (Coffey Labs), which started as a fork of
+Stalwart (Stalwart Labs LLC). Their copyright notices stay on every file
+they cover. A few files carry code from other projects under MIT or BSD
+licenses, which stays under those licenses; THIRD-PARTY.md lists it with its
+notices. Stalwart is a trademark of Stalwart Labs LLC. Hearth Mail is not
+affiliated with Stalwart Labs or Coffey Labs.
