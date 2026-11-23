@@ -79,10 +79,6 @@ impl Server {
                 SyncCollection::Identity,
                 SyncCollection::EmailSubmission,
                 SyncCollection::SieveScript,
-                SyncCollection::FileNode,
-                SyncCollection::AddressBook,
-                SyncCollection::Calendar,
-                SyncCollection::CalendarEventNotification,
             ] {
                 let collection = sync_collection.into();
                 let from_key = LogKey {

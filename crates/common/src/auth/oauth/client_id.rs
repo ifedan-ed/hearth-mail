@@ -16,6 +16,8 @@ const CLIENT_ID_HEADER: &str = "swc1.";
 const CLIENT_ID_KEY_CONTEXT: &str = "stalwart-oauth-client-id-sw1";
 const CLIENT_ID_VERSION: u8 = 1;
 
+/// Scope bit positions in sealed client ids; fixed, so ids issued before stay
+/// readable (contacts and calendars included, though no longer offered).
 const SCOPE_BITS: &[&str] = &[
     SCOPE_OPENID,
     SCOPE_OFFLINE_ACCESS,

@@ -8,11 +8,7 @@
 
 use std::fmt;
 
-use crate::{
-    object::{email::EmailComparator, file_node::FileNodeComparator},
-    response::serialize::serialize_hex,
-    types::date::UTCDate,
-};
+use crate::{object::email::EmailComparator, response::serialize::serialize_hex};
 use ahash::AHashMap;
 use serde::{Deserialize, Deserializer};
 use types::{id::Id, type_state::DataType};
@@ -57,6 +53,8 @@ pub struct Account {
 
 #[derive(Debug, Clone, Copy, serde::Serialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Capability {
+    // Bits 4 to 7, 14 and 15 were contacts, calendars, principal availability
+    // and files (removed; the bits stay unused).
     #[serde(rename(serialize = "urn:ietf:params:jmap:core"))]
     Core = 1 << 0,
     #[serde(rename(serialize = "urn:ietf:params:jmap:mail"))]
@@ -65,14 +63,6 @@ pub enum Capability {
     Submission = 1 << 2,
     #[serde(rename(serialize = "urn:ietf:params:jmap:vacationresponse"))]
     VacationResponse = 1 << 3,
-    #[serde(rename(serialize = "urn:ietf:params:jmap:contacts"))]
-    Contacts = 1 << 4,
-    #[serde(rename(serialize = "urn:ietf:params:jmap:contacts:parse"))]
-    ContactsParse = 1 << 5,
-    #[serde(rename(serialize = "urn:ietf:params:jmap:calendars"))]
-    Calendars = 1 << 6,
-    #[serde(rename(serialize = "urn:ietf:params:jmap:calendars:parse"))]
-    CalendarsParse = 1 << 7,
     #[serde(rename(serialize = "urn:ietf:params:jmap:websocket"))]
     WebSocket = 1 << 8,
     #[serde(rename(serialize = "urn:ietf:params:jmap:sieve"))]
@@ -85,10 +75,6 @@ pub enum Capability {
     Principals = 1 << 12,
     #[serde(rename(serialize = "urn:ietf:params:jmap:principals:owner"))]
     PrincipalsOwner = 1 << 13,
-    #[serde(rename(serialize = "urn:ietf:params:jmap:principals:availability"))]
-    PrincipalsAvailability = 1 << 14,
-    #[serde(rename(serialize = "urn:ietf:params:jmap:filenode"))]
-    FileNode = 1 << 15,
     #[serde(rename(serialize = "urn:ietf:params:jmap:mail:share"))]
     MailShare = 1 << 16,
     #[serde(rename(serialize = "urn:inbuxa:jmap:registry"))]
@@ -126,11 +112,7 @@ pub enum Capabilities {
     SieveAccount(SieveAccountCapabilities),
     SieveSession(SieveSessionCapabilities),
     Blob(BlobCapabilities),
-    Contacts(ContactsCapabilities),
     Principals(PrincipalCapabilities),
-    PrincipalsAvailability(PrincipalAvailabilityCapabilities),
-    Calendar(CalendarCapabilities),
-    FileNode(FileNodeCapabilities),
     WebPush(WebPushCapabilities),
     Inbuxa(InbuxaAccountCapabilities),
     // inbuxa: AL-7
@@ -289,36 +271,6 @@ pub struct BlobCapabilities {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
-pub struct CalendarCapabilities {
-    #[serde(rename(serialize = "maxCalendarsPerEvent"))]
-    pub max_calendars_per_event: Option<u64>,
-    #[serde(rename(serialize = "minDateTime"))]
-    pub min_date_time: UTCDate,
-    #[serde(rename(serialize = "maxDateTime"))]
-    pub max_date_time: UTCDate,
-    #[serde(rename(serialize = "maxExpandedQueryDuration"))]
-    pub max_expanded_query_duration: String,
-    #[serde(rename(serialize = "maxParticipantsPerEvent"))]
-    pub max_participants_per_event: Option<u64>,
-    #[serde(rename(serialize = "mayCreateCalendar"))]
-    pub may_create_calendar: bool,
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct ContactsCapabilities {
-    #[serde(rename(serialize = "maxAddressBooksPerCard"))]
-    pub max_address_books_per_card: Option<u64>,
-    #[serde(rename(serialize = "mayCreateAddressBook"))]
-    pub may_create_address_book: bool,
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct PrincipalAvailabilityCapabilities {
-    #[serde(rename(serialize = "maxAvailabilityDuration"))]
-    pub max_availability_duration: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
 pub struct PrincipalCapabilities {
     #[serde(rename(serialize = "currentUserPrincipalId"))]
     pub current_user_principal_id: Option<Id>,
@@ -346,30 +298,6 @@ pub struct PrincipalCalendarCapabilities {
 }*/
 
 #[derive(Debug, Clone, serde::Serialize)]
-pub struct FileNodeCapabilities {
-    #[serde(rename(serialize = "maxFileNodeDepth"))]
-    pub max_file_node_depth: Option<u64>,
-    #[serde(rename(serialize = "maxSizeFileNodeName"))]
-    pub max_size_file_node_name: u64,
-    #[serde(rename(serialize = "forbiddenNameChars"))]
-    pub forbidden_name_chars: Option<String>,
-    #[serde(rename(serialize = "forbiddenNodeNames"))]
-    pub forbidden_node_names: Option<Vec<String>>,
-    #[serde(rename(serialize = "fileNodeQuerySortOptions"))]
-    pub file_node_query_sort_options: Vec<FileNodeComparator>,
-    #[serde(rename(serialize = "mayCreateTopLevelFileNode"))]
-    pub may_create_top_level_file_node: bool,
-    #[serde(rename(serialize = "caseInsensitiveNames"))]
-    pub case_insensitive_names: bool,
-    #[serde(rename(serialize = "webTrashUrl"))]
-    pub web_trash_url: Option<String>,
-    #[serde(rename(serialize = "webUrlTemplate"))]
-    pub web_url_template: Option<String>,
-    #[serde(rename(serialize = "webWriteUrlTemplate"))]
-    pub web_write_url_template: Option<String>,
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
 pub struct WebPushCapabilities {
     #[serde(rename(serialize = "applicationServerKey"))]
     pub application_server_key: String,
@@ -391,18 +319,12 @@ impl Capability {
             Capability::Mail => "urn:ietf:params:jmap:mail",
             Capability::Submission => "urn:ietf:params:jmap:submission",
             Capability::VacationResponse => "urn:ietf:params:jmap:vacationresponse",
-            Capability::Contacts => "urn:ietf:params:jmap:contacts",
-            Capability::ContactsParse => "urn:ietf:params:jmap:contacts:parse",
-            Capability::Calendars => "urn:ietf:params:jmap:calendars",
-            Capability::CalendarsParse => "urn:ietf:params:jmap:calendars:parse",
             Capability::WebSocket => "urn:ietf:params:jmap:websocket",
             Capability::Sieve => "urn:ietf:params:jmap:sieve",
             Capability::Blob => "urn:ietf:params:jmap:blob",
             Capability::Quota => "urn:ietf:params:jmap:quota",
             Capability::Principals => "urn:ietf:params:jmap:principals",
             Capability::PrincipalsOwner => "urn:ietf:params:jmap:principals:owner",
-            Capability::PrincipalsAvailability => "urn:ietf:params:jmap:principals:availability",
-            Capability::FileNode => "urn:ietf:params:jmap:filenode",
             Capability::MailShare => "urn:ietf:params:jmap:mail:share",
             Capability::Stalwart => "urn:inbuxa:jmap:registry",
             Capability::WebPushVapid => "urn:ietf:params:jmap:webpush-vapid",
@@ -418,17 +340,11 @@ impl Capability {
             Capability::Mail,
             Capability::Submission,
             Capability::VacationResponse,
-            Capability::Contacts,
-            Capability::ContactsParse,
-            Capability::Calendars,
-            Capability::CalendarsParse,
             Capability::WebSocket,
             Capability::Sieve,
             Capability::Blob,
             Capability::Quota,
             Capability::Principals,
-            Capability::PrincipalsAvailability,
-            Capability::FileNode,
             Capability::MailShare,
             Capability::Stalwart,
             Capability::WebPushVapid,
@@ -500,33 +416,13 @@ impl WebSocketCapabilities {
 }
 
 impl Capabilities {
-    pub fn to_account_capabilities(
-        &self,
-        current_user_principal_id: Option<Id>,
-        may_create: bool,
-    ) -> Capabilities {
+    /// The per-account form of a session capability. Only the principals
+    /// capability differs per account (it names the account's principal).
+    pub fn to_account_capabilities(&self, current_user_principal_id: Option<Id>) -> Capabilities {
         match self {
-            Capabilities::Contacts(contacts_capabilities) => {
-                Capabilities::Contacts(ContactsCapabilities {
-                    may_create_address_book: may_create,
-                    ..contacts_capabilities.clone()
-                })
-            }
             Capabilities::Principals(_) => Capabilities::Principals(PrincipalCapabilities {
                 current_user_principal_id,
             }),
-            Capabilities::Calendar(calendar_capabilities) => {
-                Capabilities::Calendar(CalendarCapabilities {
-                    may_create_calendar: may_create,
-                    ..calendar_capabilities.clone()
-                })
-            }
-            Capabilities::FileNode(file_node_capabilities) => {
-                Capabilities::FileNode(FileNodeCapabilities {
-                    may_create_top_level_file_node: may_create,
-                    ..file_node_capabilities.clone()
-                })
-            }
             _ => self.clone(),
         }
     }
@@ -539,18 +435,12 @@ impl Capability {
             "urn:ietf:params:jmap:mail" => Capability::Mail,
             "urn:ietf:params:jmap:submission" => Capability::Submission,
             "urn:ietf:params:jmap:vacationresponse" => Capability::VacationResponse,
-            "urn:ietf:params:jmap:contacts" => Capability::Contacts,
-            "urn:ietf:params:jmap:calendars" => Capability::Calendars,
             "urn:ietf:params:jmap:websocket" => Capability::WebSocket,
             "urn:ietf:params:jmap:sieve" => Capability::Sieve,
             "urn:ietf:params:jmap:blob" => Capability::Blob,
             "urn:ietf:params:jmap:quota" => Capability::Quota,
             "urn:ietf:params:jmap:principals" => Capability::Principals,
             "urn:ietf:params:jmap:principals:owner" => Capability::PrincipalsOwner,
-            "urn:ietf:params:jmap:filenode" => Capability::FileNode,
-            "urn:ietf:params:jmap:principals:availability" => Capability::PrincipalsAvailability,
-            "urn:ietf:params:jmap:contacts:parse" => Capability::ContactsParse,
-            "urn:ietf:params:jmap:calendars:parse" => Capability::CalendarsParse,
             "urn:ietf:params:jmap:mail:share" => Capability::MailShare,
             "urn:inbuxa:jmap:registry" => Capability::Stalwart,
             "urn:ietf:params:jmap:webpush-vapid" => Capability::WebPushVapid,

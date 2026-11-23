@@ -9,9 +9,6 @@ use jmap_proto::{
     method::get::{GetRequest, GetResponse},
     object::{
         JmapRight,
-        addressbook::AddressBookRight,
-        calendar::CalendarRight,
-        file_node::FileNodeRight,
         mailbox::MailboxRight,
         share_notification::{self, ShareNotificationProperty, ShareNotificationValue},
     },
@@ -248,30 +245,6 @@ fn map_rights(
     let mut obj = Map::with_capacity(3);
 
     match object_type {
-        Collection::Calendar | Collection::CalendarEvent => {
-            for right in CalendarRight::all_rights() {
-                obj.insert_unchecked(
-                    Key::Borrowed(right.as_str()),
-                    Value::Bool(right.to_acl().iter().all(|acl| rights.contains(*acl))),
-                );
-            }
-        }
-        Collection::AddressBook | Collection::ContactCard => {
-            for right in AddressBookRight::all_rights() {
-                obj.insert_unchecked(
-                    Key::Borrowed(right.as_str()),
-                    Value::Bool(right.to_acl().iter().all(|acl| rights.contains(*acl))),
-                );
-            }
-        }
-        Collection::FileNode => {
-            for right in FileNodeRight::all_rights() {
-                obj.insert_unchecked(
-                    Key::Borrowed(right.as_str()),
-                    Value::Bool(right.to_acl().iter().all(|acl| rights.contains(*acl))),
-                );
-            }
-        }
         Collection::Mailbox | Collection::Email => {
             for right in MailboxRight::all_rights() {
                 obj.insert_unchecked(

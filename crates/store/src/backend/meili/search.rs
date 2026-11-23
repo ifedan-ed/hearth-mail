@@ -40,13 +40,10 @@ impl MeiliSearchStore {
             json_serialize(request, &document);
         }
 
-        for (mut payload, index) in index_documents.into_iter().zip([
-            SearchIndex::Email,
-            SearchIndex::Calendar,
-            SearchIndex::Contacts,
-            SearchIndex::Tracing,
-            SearchIndex::File,
-        ]) {
+        for (mut payload, index) in index_documents
+            .into_iter()
+            .zip([SearchIndex::Email, SearchIndex::Tracing])
+        {
             if payload.is_empty() {
                 continue;
             }
@@ -551,10 +548,7 @@ impl SearchIndex {
     fn array_pos(&self) -> usize {
         match self {
             SearchIndex::Email => 0,
-            SearchIndex::Calendar => 1,
-            SearchIndex::Contacts => 2,
             SearchIndex::Tracing => 3,
-            SearchIndex::File => 4,
             SearchIndex::InMemory => unreachable!(),
         }
     }

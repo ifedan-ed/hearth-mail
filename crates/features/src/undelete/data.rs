@@ -148,21 +148,6 @@ pub enum Extra {
         mailboxes: Vec<u32>,
         keywords: Vec<String>,
     },
-    FileNode {
-        parent_id: Option<u32>,
-        name: String,
-        media_type: Option<String>,
-        #[serde(default)]
-        size: u32,
-    },
-    CalendarEvent {
-        calendar_ids: Vec<u32>,
-        name: String,
-    },
-    ContactCard {
-        address_book_ids: Vec<u32>,
-        name: String,
-    },
     SieveScript {
         name: String,
     },

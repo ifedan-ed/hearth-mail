@@ -78,95 +78,6 @@ impl SearchableField for EmailSearchField {
     }
 }
 
-impl SearchableField for CalendarSearchField {
-    fn index() -> SearchIndex {
-        SearchIndex::Calendar
-    }
-
-    fn primary_keys() -> &'static [SearchField] {
-        &[SearchField::AccountId, SearchField::DocumentId]
-    }
-
-    fn all_fields() -> &'static [SearchField] {
-        &[
-            SearchField::Calendar(CalendarSearchField::Title),
-            SearchField::Calendar(CalendarSearchField::Description),
-            SearchField::Calendar(CalendarSearchField::Location),
-            SearchField::Calendar(CalendarSearchField::Owner),
-            SearchField::Calendar(CalendarSearchField::Attendee),
-            SearchField::Calendar(CalendarSearchField::Start),
-            SearchField::Calendar(CalendarSearchField::Uid),
-        ]
-    }
-
-    fn is_indexed(&self) -> bool {
-        matches!(self, CalendarSearchField::Start | CalendarSearchField::Uid)
-    }
-
-    fn is_text(&self) -> bool {
-        !self.is_indexed()
-    }
-}
-
-impl SearchableField for ContactSearchField {
-    fn index() -> SearchIndex {
-        SearchIndex::Contacts
-    }
-
-    fn primary_keys() -> &'static [SearchField] {
-        &[SearchField::AccountId, SearchField::DocumentId]
-    }
-
-    fn all_fields() -> &'static [SearchField] {
-        &[
-            SearchField::Contact(ContactSearchField::Member),
-            SearchField::Contact(ContactSearchField::Kind),
-            SearchField::Contact(ContactSearchField::Name),
-            SearchField::Contact(ContactSearchField::Nickname),
-            SearchField::Contact(ContactSearchField::Organization),
-            SearchField::Contact(ContactSearchField::Email),
-            SearchField::Contact(ContactSearchField::Phone),
-            SearchField::Contact(ContactSearchField::OnlineService),
-            SearchField::Contact(ContactSearchField::Address),
-            SearchField::Contact(ContactSearchField::Note),
-            SearchField::Contact(ContactSearchField::Uid),
-        ]
-    }
-
-    fn is_indexed(&self) -> bool {
-        matches!(self, ContactSearchField::Uid | ContactSearchField::Kind)
-    }
-
-    fn is_text(&self) -> bool {
-        !self.is_indexed()
-    }
-}
-
-impl SearchableField for FileSearchField {
-    fn index() -> SearchIndex {
-        SearchIndex::File
-    }
-
-    fn primary_keys() -> &'static [SearchField] {
-        &[SearchField::AccountId, SearchField::DocumentId]
-    }
-
-    fn all_fields() -> &'static [SearchField] {
-        &[
-            SearchField::File(FileSearchField::Name),
-            SearchField::File(FileSearchField::Content),
-        ]
-    }
-
-    fn is_indexed(&self) -> bool {
-        false
-    }
-
-    fn is_text(&self) -> bool {
-        true
-    }
-}
-
 impl SearchableField for TracingSearchField {
     fn index() -> SearchIndex {
         SearchIndex::Tracing
@@ -200,9 +111,6 @@ impl SearchField {
     pub(crate) fn is_indexed(&self) -> bool {
         match self {
             SearchField::Email(field) => field.is_indexed(),
-            SearchField::Calendar(field) => field.is_indexed(),
-            SearchField::Contact(field) => field.is_indexed(),
-            SearchField::File(field) => field.is_indexed(),
             SearchField::Tracing(field) => field.is_indexed(),
             SearchField::AccountId | SearchField::DocumentId | SearchField::Id => false,
         }
@@ -211,9 +119,6 @@ impl SearchField {
     pub(crate) fn is_text(&self) -> bool {
         match self {
             SearchField::Email(field) => field.is_text(),
-            SearchField::Calendar(field) => field.is_text(),
-            SearchField::Contact(field) => field.is_text(),
-            SearchField::File(field) => field.is_text(),
             SearchField::Tracing(field) => field.is_text(),
             SearchField::AccountId | SearchField::DocumentId | SearchField::Id => false,
         }
@@ -228,9 +133,6 @@ impl SearchIndex {
     pub fn all_fields(&self) -> &[SearchField] {
         match self {
             SearchIndex::Email => EmailSearchField::all_fields(),
-            SearchIndex::Calendar => CalendarSearchField::all_fields(),
-            SearchIndex::Contacts => ContactSearchField::all_fields(),
-            SearchIndex::File => FileSearchField::all_fields(),
             SearchIndex::Tracing => TracingSearchField::all_fields(),
             SearchIndex::InMemory => unreachable!(),
         }
@@ -239,9 +141,6 @@ impl SearchIndex {
     pub fn primary_keys(&self) -> &'static [SearchField] {
         match self {
             SearchIndex::Email => EmailSearchField::primary_keys(),
-            SearchIndex::Calendar => CalendarSearchField::primary_keys(),
-            SearchIndex::Contacts => ContactSearchField::primary_keys(),
-            SearchIndex::File => FileSearchField::primary_keys(),
             SearchIndex::Tracing => TracingSearchField::primary_keys(),
             SearchIndex::InMemory => unreachable!(),
         }

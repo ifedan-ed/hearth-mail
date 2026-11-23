@@ -56,7 +56,6 @@ pub enum PushEvent {
 #[derive(Debug, Clone)]
 pub enum PushNotification {
     StateChange(StateChange),
-    CalendarAlert(CalendarAlert),
     EmailPush(EmailPush),
 }
 
@@ -65,15 +64,6 @@ pub struct EmailPush {
     pub account_id: u32,
     pub email_id: u32,
     pub change_id: u64,
-}
-
-#[derive(Debug, Clone)]
-pub struct CalendarAlert {
-    pub account_id: u32,
-    pub event_id: u32,
-    pub recurrence_id: Option<i64>,
-    pub uid: String,
-    pub alert_id: String,
 }
 
 #[derive(Debug)]
@@ -102,7 +92,6 @@ pub enum RegistryChange {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum CacheInvalidation {
     AccessToken(u32),
-    DavResources(u32),
     Domain(u32),
     Account(u32),
     DkimSignature(u32),
@@ -279,7 +268,6 @@ impl PushNotification {
     pub fn account_id(&self) -> u32 {
         match self {
             PushNotification::StateChange(state_change) => state_change.account_id,
-            PushNotification::CalendarAlert(calendar_alert) => calendar_alert.account_id,
             PushNotification::EmailPush(email_push) => email_push.account_id,
         }
     }
@@ -295,13 +283,6 @@ impl PushNotification {
                         change_id: state_change.change_id,
                         types: filtered_types,
                     }))
-                } else {
-                    None
-                }
-            }
-            PushNotification::CalendarAlert(_) => {
-                if types.contains(DataType::CalendarAlert) {
-                    Some(self.clone())
                 } else {
                     None
                 }

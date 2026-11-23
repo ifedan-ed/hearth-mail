@@ -165,12 +165,9 @@ async fn restore_item(server: &Server, task: &TaskRestoreArchivedItem) -> trc::R
                 Err(err) => Err(err.caused_by(trc::location!())),
             }
         }
-        // inbuxa: UD-1, UD-8: the other kinds the fork archives
-        ArchivedItemType::FileNode
-        | ArchivedItemType::CalendarEvent
-        | ArchivedItemType::ContactCard
-        | ArchivedItemType::SieveScript => {
-            let Some((item_id, item, extra)) = undelete::records::for_restore(
+        // inbuxa: UD-1, UD-8: Sieve scripts, the other kind the fork archives
+        ArchivedItemType::SieveScript => {
+            let Some((item_id, item, _extra)) = undelete::records::for_restore(
                 &server.core.storage.data,
                 server.registry(),
                 task.account_id.document_id(),
@@ -180,10 +177,8 @@ async fn restore_item(server: &Server, task: &TaskRestoreArchivedItem) -> trc::R
             else {
                 return Ok(TaskResult::Success(vec![]));
             };
-            match crate::task_manager::inbuxa_restore::restore_other(
-                server, task, item_id, &item, extra,
-            )
-            .await?
+            match crate::task_manager::inbuxa_restore::restore_other(server, task, item_id, &item)
+                .await?
             {
                 None => Ok(TaskResult::Success(vec![])),
                 Some(reason) => {

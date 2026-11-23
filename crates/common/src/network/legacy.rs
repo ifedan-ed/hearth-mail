@@ -711,12 +711,7 @@ mod tests {
         ] {
             assert!(is_legacy_service(&protocol), "{protocol:?}");
         }
-        for protocol in [
-            ServiceProtocol::Jmap,
-            ServiceProtocol::Caldav,
-            ServiceProtocol::Carddav,
-            ServiceProtocol::Webdav,
-        ] {
+        for protocol in [ServiceProtocol::Jmap] {
             assert!(!is_legacy_service(&protocol), "{protocol:?}");
         }
     }

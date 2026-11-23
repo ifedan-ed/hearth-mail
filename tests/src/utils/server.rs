@@ -19,7 +19,7 @@ use crate::{
 };
 use ahash::AHashMap;
 use common::{
-    BuildServer, Caches, Core, Data, DavResources, Inner, Server,
+    BuildServer, Caches, Core, Data, Inner, Server,
     auth::RECOVERY_ADMIN_ID,
     config::{
         server::{Listeners, ServerProtocol},
@@ -34,7 +34,6 @@ use common::{
     psl,
 };
 use email::message::metadata::MessageMetadata;
-use groupware::cache::GroupwareCache;
 use http::HttpSessionManager;
 use imap::core::ImapSessionManager;
 use jmap_client::client::Client;
@@ -576,14 +575,6 @@ impl TestServer {
     pub fn new_mta_session_with_shutdown(&self) -> (Session<DummyIo>, watch::Sender<bool>) {
         let (tx, rx) = watch::channel(true);
         (Session::test_with_shutdown(self.server.clone(), rx), tx)
-    }
-
-    pub async fn resources(&self, name: &'static str, collection: Collection) -> Arc<DavResources> {
-        let account_id = self.account(name).id().document_id();
-        self.server
-            .fetch_dav_resources(account_id, account_id, collection.into())
-            .await
-            .unwrap()
     }
 
     pub async fn fetch_email(&self, account_id: u32, document_id: u32) -> Vec<u8> {

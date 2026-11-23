@@ -4,69 +4,33 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-//! Branding and templates acceptance tests, from
+//! Branding acceptance tests, from
 //! `docs/spec/features/branding-and-templates.md`. Each check names the test
-//! number or the requirement it covers.
+//! number or the requirement it covers. The calendar email templates and the
+//! RSVP page (tests 10 to 15) went with calendars; the logo tests stay.
 
 use crate::utils::{
     account::Account,
     server::{TestServer, TestServerBuilder},
-    webdav::DummyWebDavClient,
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
-use calcard::icalendar::{ICalendarParticipationStatus, ICalendarProperty};
-use calcard::{common::timezone::Tz, icalendar::ICalendarMethod};
-use email::cache::MessageCacheFetch;
-use groupware::scheduling::{ItipField, ItipParticipant, ItipSummary, ItipTime, ItipValue};
 use hyper::StatusCode;
 use jmap_proto::error::set::SetErrorType;
-use mail_parser::{MessageParser, MimeHeaders};
 use registry::schema::{
     prelude::{Object, ObjectInner, ObjectType, Property},
     structs::{
-        CalendarAlarm, CalendarScheduling, CertificateManagement, DkimManagement, DnsManagement,
-        Domain, Enterprise, Tenant, UserRoles,
+        CertificateManagement, DkimManagement, DnsManagement, Domain, Enterprise, Tenant, UserRoles,
     },
 };
-use registry::types::EnumImpl;
 use serde_json::json;
-use services::task_manager::imip::build_itip_template;
-use std::{str::FromStr, time::Duration};
-use store::{
-    registry::write::{RegistryWrite, RegistryWriteResult},
-    write::now,
-};
-use trc::{Collector, EventType, RegistryEvent};
+use std::time::Duration;
+use store::registry::write::{RegistryWrite, RegistryWriteResult};
 use types::id::Id;
 
 const SECRET: &str = "branding test user passphrase";
 const PNG: &[u8] = include_bytes!("../../../resources/branding/email-logo.png");
 const SVG_SCRIPTED: &[u8] =
     b"<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>";
-
-/// A template that shows every alarm variable (BT-13), each in a marker.
-const ALARM_TEMPLATE: &str = concat!(
-    "<html lang=\"{{lang}}\" dir=\"{{dir}}\"><body>CUSTOM[{{page_title}}]",
-    "<img src=\"{{logo_cid}}\">",
-    "{{#if header}}H[{{header}}]{{/if header}}",
-    "{{#if event_title}}T[{{event_title}}]{{/if event_title}}",
-    "{{#if event_description}}D[{{event_description}}]{{/if event_description}}",
-    "{{#each event_details}}K[{{key}}]V[{{value}}]{{#if link}}L[{{link}}]{{/if link}}{{/each event_details}}",
-    "AT[{{attendees_title}}]{{#each attendees}}A[{{key}}|{{value}}]{{/each attendees}}",
-    "<a href=\"{{action_url}}\">N[{{action_name}}]</a>F[{{footer}}]</body></html>"
-);
-
-/// A template for iMIP messages (BT-13).
-const INVITE_TEMPLATE: &str = concat!(
-    "<html lang=\"{{lang}}\">CUSTOM[{{page_title}}]<img src=\"{{logo_cid}}\">",
-    "{{#if header}}H[{{header}}|{{color}}]{{/if header}}",
-    "{{#if event_title}}T[{{event_title}}]{{/if event_title}}",
-    "{{#each event_details}}K[{{key}}]V[{{value}}]{{#if changed}}OLD[{{old_value}}]{{/if changed}}{{/each event_details}}",
-    "{{#if attendees}}AT[{{attendees_title}}]{{/if attendees}}",
-    "{{#if rsvp}}R[{{rsvp}}]{{/if rsvp}}",
-    "{{#each actions}}ACT[{{action_name}}]{{/each actions}}",
-    "{{#each footer}}F[{{key}}]{{/each footer}}</html>"
-);
 
 pub async fn test(test: &mut TestServer) {
     println!("Running branding tests...");
@@ -89,29 +53,12 @@ pub async fn test(test: &mut TestServer) {
             json!({ Property::Roles: UserRoles::Admin }),
         )
         .await;
-    let user = admin
-        .create_user_account(
-            "alarm@plain-brand.example.org",
-            SECRET,
-            "Alarm user",
-            &[],
-            vec![],
-        )
-        .await;
     let png_url = data_url("image/png", PNG);
 
     // Acceptance test 1: nothing set, no custom logo anywhere
     let answer = get(&admin, "/logo?domain=plain-brand.example.org", None).await;
     assert_eq!(answer.status, StatusCode::NOT_FOUND, "test 1");
     answer.assert_logo_headers("test 1");
-    assert!(
-        test.server
-            .logo_resource("plain-brand.example.org")
-            .await
-            .unwrap()
-            .is_none(),
-        "test 1: emails keep the built-in"
-    );
 
     // Acceptance test 8: logo writes (BT-3)
     for bad in [
@@ -127,38 +74,7 @@ pub async fn test(test: &mut TestServer) {
             .assert_properties(&["logo"]);
     }
 
-    // Acceptance test 12: template writes (BT-15)
-    for (bad, why) in [
-        ("{{#if header}}x", "never closed"),
-        ("{{unknown}}", "Unknown variable"),
-        ("{{!header}}", "raw output"),
-        (
-            "{{#each actions}}{{#each attendees}}{{/each attendees}}{{/each actions}}",
-            "inside another",
-        ),
-    ] {
-        admin
-            .registry_update_object_expect_err(
-                ObjectType::CalendarAlarm,
-                Id::singleton(),
-                json!({"template": bad}),
-            )
-            .await
-            .assert_type(SetErrorType::InvalidProperties)
-            .assert_properties(&["template"])
-            .assert_description_contains(why);
-    }
-    admin
-        .registry_update_object_expect_err(
-            ObjectType::CalendarScheduling,
-            Id::singleton(),
-            json!({"emailTemplate": "x".repeat(300 * 1024)}),
-        )
-        .await
-        .assert_type(SetErrorType::InvalidProperties)
-        .assert_properties(&["emailTemplate"]);
-
-    // Acceptance test 2: a server-wide PNG logo is served and embedded
+    // Acceptance test 2: a server-wide PNG logo is served
     admin
         .registry_update_setting(
             Enterprise {
@@ -173,47 +89,6 @@ pub async fn test(test: &mut TestServer) {
     assert_eq!(answer.header("content-type"), "image/png", "test 2");
     assert_eq!(answer.body, PNG, "test 2");
     answer.assert_logo_headers("test 2");
-
-    // Acceptance tests 10 and 14: a custom alarm template, used for the next
-    // alarm with no reload, every variable filled and values escaped; the
-    // email embeds the server-wide PNG (test 2)
-    admin
-        .registry_update_setting(
-            CalendarAlarm {
-                template: Some(ALARM_TEMPLATE.to_string()),
-                ..Default::default()
-            },
-            &[Property::Template],
-        )
-        .await;
-    let (html, logo) = alarm_email(test, &user).await;
-    for marker in [
-        "CUSTOM[", "H[", "T[", "D[", "K[", "V[", "AT[", "A[", "N[", "F[",
-    ] {
-        assert!(
-            html.contains(marker) && !html.contains(&format!("{marker}]")),
-            "test 10: {marker} filled in {html}"
-        );
-    }
-    assert!(html.contains("lang=\"en"), "test 10: lang in {html}");
-    assert!(
-        html.contains("L[https://meet.example.com/brand]"),
-        "test 10: link in {html}"
-    );
-    assert!(html.contains("src=\"cid:"), "test 10: logo_cid in {html}");
-    assert!(
-        html.contains("href=\"webcal"),
-        "test 10: action_url in {html}"
-    );
-    assert!(
-        html.contains("T[&lt;b&gt;x&lt;/b&gt;]"),
-        "test 10: the title is text, not HTML: {html}"
-    );
-    assert_eq!(
-        logo,
-        Some(("image/png".to_string(), PNG.to_vec())),
-        "test 2"
-    );
 
     // Acceptance test 3: the tenant's logo, then the domain's own
     admin
@@ -244,8 +119,7 @@ pub async fn test(test: &mut TestServer) {
         assert_eq!(answer.header("content-type"), "image/gif", "test 4");
     }
 
-    // Acceptance test 5: a URL logo is redirected to, never fetched, and
-    // emails fall back to the next logo they can carry
+    // Acceptance test 5: a URL logo is redirected to, never fetched
     admin
         .registry_update_object(
             ObjectType::Domain,
@@ -300,14 +174,6 @@ pub async fn test(test: &mut TestServer) {
             &[Property::LogoUrl],
         )
         .await;
-    let resource = test
-        .server
-        .logo_resource("plain-brand.example.org")
-        .await
-        .unwrap()
-        .expect("test 5: the server-wide PNG");
-    assert_eq!(resource.contents, PNG, "test 5");
-
     // Acceptance test 6: an unknown domain answers as a known one with no
     // logo of its own
     admin
@@ -336,125 +202,6 @@ pub async fn test(test: &mut TestServer) {
         "test 7"
     );
 
-    // Acceptance test 11: a custom iMIP template for each kind of message
-    admin
-        .registry_update_setting(
-            CalendarScheduling {
-                email_template: Some(INVITE_TEMPLATE.to_string()),
-                ..Default::default()
-            },
-            &[Property::EmailTemplate],
-        )
-        .await;
-    for (kind, summary) in itip_summaries() {
-        let body = itip_html(test, &user, &summary).await;
-        assert!(body.contains("CUSTOM["), "test 11 {kind}: {body}");
-        match kind {
-            "invite" => {
-                assert!(body.contains("ACT["), "test 11: RSVP actions, {body}");
-                assert!(body.contains("AT["), "test 11: attendees, {body}");
-            }
-            "update" => {
-                assert!(body.contains("OLD[Dinner]"), "test 11: old value, {body}");
-                assert!(body.contains("|info]"), "test 11: color, {body}");
-            }
-            "cancel" => assert!(body.contains("|danger]"), "test 11: {body}"),
-            _ => assert!(body.contains("H["), "test 11 reply: {body}"),
-        }
-    }
-
-    // Acceptance test 13: stored templates from before the fork. Raw output
-    // is escaped; one that doesn't parse leaves the built-in in use, with a
-    // warning at each reload
-    store_directly(
-        test,
-        ObjectInner::CalendarScheduling(CalendarScheduling {
-            email_template: Some("RAW[{{!event_title}}]".to_string()),
-            ..Default::default()
-        }),
-    )
-    .await;
-    let body = itip_html(test, &user, &itip_summaries()[0].1).await;
-    assert!(
-        body.contains("RAW[&lt;b&gt;x&lt;/b&gt;]"),
-        "test 13: {body}"
-    );
-    store_directly(
-        test,
-        ObjectInner::CalendarScheduling(CalendarScheduling {
-            email_template: Some("{{#if header}}unclosed".to_string()),
-            ..Default::default()
-        }),
-    )
-    .await;
-    let body = itip_html(test, &user, &itip_summaries()[0].1).await;
-    assert!(
-        !body.contains("unclosed") && body.contains("<title>"),
-        "test 13: the built-in is used"
-    );
-    let warning = EventType::Registry(RegistryEvent::BuildWarning).to_id() as usize;
-    let warnings = Collector::read_metric_counter(warning);
-    admin.reload_settings().await;
-    let after = Collector::read_metric_counter(warning);
-    assert!(
-        after > warnings || !Collector::is_metric(warning),
-        "test 13: registry.build-warning"
-    );
-
-    // Acceptance test 15: a custom RSVP page, byte for byte, with BT-21's
-    // headers
-    let page = "<!doctype html><title>{{page_title}}</title><p>Custom RSVP</p>";
-    admin
-        .registry_update_setting(
-            CalendarScheduling {
-                http_rsvp_template: Some(page.to_string()),
-                ..Default::default()
-            },
-            &[Property::HttpRsvpTemplate],
-        )
-        .await;
-    let answer = get(&admin, "/calendar/rsvp?token=x", None).await;
-    assert_eq!(answer.status, StatusCode::OK, "test 15");
-    assert_eq!(answer.body, page.as_bytes(), "test 15: byte for byte");
-    assert_eq!(answer.header("referrer-policy"), "no-referrer", "test 15");
-    assert!(
-        answer.header("cache-control").contains("no-store"),
-        "test 15"
-    );
-    assert!(
-        answer
-            .header("content-security-policy")
-            .contains("connect-src 'self'"),
-        "test 15"
-    );
-    admin
-        .registry_update_setting(
-            CalendarScheduling {
-                http_rsvp_enable: false,
-                ..Default::default()
-            },
-            &[Property::HttpRsvpEnable],
-        )
-        .await;
-    admin.reload_settings().await;
-    assert_ne!(
-        get(&admin, "/calendar/rsvp?token=x", None).await.status,
-        StatusCode::OK,
-        "test 15: page gone"
-    );
-    let api = post(&admin, "/api/calendar/rsvp", "{\"token\":\"x\"}").await;
-    assert_ne!(api.status, StatusCode::OK, "test 15: API gone");
-    admin
-        .registry_update_setting(
-            CalendarScheduling {
-                http_rsvp_enable: true,
-                ..Default::default()
-            },
-            &[Property::HttpRsvpEnable],
-        )
-        .await;
-    admin.reload_settings().await;
-
     // Acceptance test 16: a tenant administrator sets its domain's logo, but
     // nothing server-wide and not its tenant's
     t_admin
@@ -465,11 +212,6 @@ pub async fn test(test: &mut TestServer) {
             ObjectType::Enterprise,
             Id::singleton(),
             json!({"logoUrl": "https://logo.example.org/x.png"}),
-        ),
-        (
-            ObjectType::CalendarAlarm,
-            Id::singleton(),
-            json!({"template": "<p>{{header}}</p>"}),
         ),
         (
             ObjectType::Tenant,
@@ -554,10 +296,7 @@ pub async fn test(test: &mut TestServer) {
 
     // Acceptance test 17: the built-in pages load /logo through an image
     // element, which follows a redirect and falls back on error (BT-26)
-    for page in [
-        include_str!("../../../resources/html-templates/login.html"),
-        include_str!("../../../resources/html-templates/calendar-rsvp.html"),
-    ] {
+    for page in [include_str!("../../../resources/html-templates/login.html")] {
         assert!(page.contains("img.src = target"), "test 17");
         assert!(page.contains("img.onerror = showDefault"), "test 17");
         assert!(!page.contains("fetch(target"), "test 17");
@@ -571,17 +310,7 @@ pub async fn test(test: &mut TestServer) {
             &[Property::LogoUrl, Property::LogoUrlDark],
         )
         .await;
-    admin
-        .registry_update_setting(CalendarAlarm::default(), &[Property::Template])
-        .await;
-    admin
-        .registry_update_setting(
-            CalendarScheduling::default(),
-            &[Property::EmailTemplate, Property::HttpRsvpTemplate],
-        )
-        .await;
     admin.reload_settings().await;
-    admin.destroy_account(user).await;
     admin.destroy_account(t_admin).await;
     for domain in [plain, t_domain] {
         admin
@@ -615,13 +344,12 @@ pub async fn branding_tests() {
     }
 }
 
-/// Acceptance test 18 (compat): the logos and templates INBUXA holds read
-/// back unchanged, and render or are served as before cutover.
+/// Acceptance test 18 (compat): the logos a copy of the live data holds are
+/// served or skipped as before cutover.
 ///
 /// INBUXA holds none (spec, observed 1), so this checks whatever a copy of
-/// its data holds: every domain's and tenant's logo, `logoUrl`, and the
-/// three templates read back as stored, logos are served by `/logo` or
-/// skipped (BT-4), and templates render or fall back (BT-19). Run it with:
+/// its data holds: every domain's logo is served by `/logo` or skipped
+/// (BT-4). Run it with:
 ///
 /// - `INBUXA_COMPAT_ADMIN`: `name:password` of a server-level administrator
 ///   in that data;
@@ -673,22 +401,6 @@ pub async fn branding_compat() {
         );
     }
 
-    // Each stored template renders or falls back; the server keeps running
-    for (object, fields) in [
-        (ObjectType::CalendarAlarm, vec!["template"]),
-        (
-            ObjectType::CalendarScheduling,
-            vec!["emailTemplate", "httpRsvpTemplate"],
-        ),
-    ] {
-        let response = admin
-            .jmap_method_call(
-                &format!("x:{}/get", object.as_str()),
-                json!({"ids": ["singleton"], "properties": fields}),
-            )
-            .await;
-        assert!(!response.list().is_empty(), "{object:?}: {response:?}");
-    }
     let _ = test;
 }
 
@@ -722,131 +434,6 @@ async fn store_directly(test: &TestServer, inner: ObjectInner) {
             .unwrap(),
     };
     assert!(matches!(result, RegistryWriteResult::Success(_)));
-}
-
-/// An alarm email for `user`: its HTML and its inline logo part.
-async fn alarm_email(test: &TestServer, user: &Account) -> (String, Option<(String, Vec<u8>)>) {
-    let account_id = user.id().document_id();
-    let start = now() as i64 + 4;
-    let event = ALARM_EVENT
-        .replace("$START", &ical_time(start))
-        .replace("$END", &ical_time(start + 3600));
-    DummyWebDavClient::new(
-        account_id,
-        user.name(),
-        SECRET,
-        "alarm@plain-brand.example.org",
-    )
-    .request_with_headers(
-        "PUT",
-        "/dav/cal/alarm%40plain-brand.example.org/default/brand-alarm.ics",
-        [("content-type", "text/calendar; charset=utf-8")],
-        event,
-    )
-    .await
-    .with_status(StatusCode::CREATED);
-
-    // The alarm fires 2s before the start
-    for _ in 0..40 {
-        tokio::time::sleep(Duration::from_millis(250)).await;
-        let messages = test.server.get_cached_messages(account_id).await.unwrap();
-        if let Some(message) = messages.emails.items.first() {
-            let raw = test.fetch_email(account_id, message.document_id).await;
-            let message = MessageParser::new().parse(&raw).unwrap();
-            let html = String::from_utf8(message.html_bodies().next().unwrap().contents().to_vec())
-                .unwrap();
-            let logo = message
-                .attachments()
-                .find(|part| part.content_id().is_some())
-                .map(|part| {
-                    (
-                        part.content_type()
-                            .map(|ct| {
-                                format!("{}/{}", ct.ctype(), ct.subtype().unwrap_or_default())
-                            })
-                            .unwrap_or_default(),
-                        part.contents().to_vec(),
-                    )
-                });
-            return (html, logo);
-        }
-    }
-    panic!("no alarm email arrived");
-}
-
-fn ical_time(timestamp: i64) -> String {
-    mail_parser::DateTime::from_timestamp(timestamp)
-        .to_rfc3339()
-        .replace(['-', ':'], "")
-}
-
-/// An iMIP body rendered as the sender would render it now.
-async fn itip_html(test: &TestServer, user: &Account, summary: &ItipSummary) -> String {
-    let account_id = user.id().document_id();
-    let account_info = test.server.account_info(account_id).await.unwrap();
-    build_itip_template(
-        &test.server,
-        &account_info,
-        account_id,
-        1,
-        "alarm@plain-brand.example.org",
-        "guest@example.net",
-        summary,
-        "cid:logo.test@plain-brand.example.org",
-    )
-    .await
-    .unwrap()
-    .body
-}
-
-fn itip_summaries() -> Vec<(&'static str, ItipSummary)> {
-    let time = ItipValue::Time(ItipTime {
-        start: 1_789_732_800,
-        tz_id: Tz::from_str("UTC").unwrap().as_id(),
-    });
-    let field = |name, value| ItipField { name, value };
-    let people = ItipValue::Participants(vec![
-        ItipParticipant {
-            email: "alarm@plain-brand.example.org".to_string(),
-            name: Some("Organizer".to_string()),
-            is_organizer: true,
-        },
-        ItipParticipant {
-            email: "guest@example.net".to_string(),
-            name: Some("Guest".to_string()),
-            is_organizer: false,
-        },
-    ]);
-    let current = vec![
-        field(
-            ICalendarProperty::Summary,
-            ItipValue::Text("<b>x</b>".to_string()),
-        ),
-        field(ICalendarProperty::Dtstart, time.clone()),
-        field(ICalendarProperty::Attendee, people),
-    ];
-    vec![
-        ("invite", ItipSummary::Invite(current.clone())),
-        (
-            "update",
-            ItipSummary::Update {
-                method: ICalendarMethod::Request,
-                current: current.clone(),
-                previous: vec![field(
-                    ICalendarProperty::Summary,
-                    ItipValue::Text("Dinner".to_string()),
-                )],
-            },
-        ),
-        ("cancel", ItipSummary::Cancel(current.clone())),
-        (
-            "reply",
-            ItipSummary::Rsvp {
-                part_stat: ICalendarParticipationStatus::Accepted,
-                current,
-            },
-        ),
-    ]
 }
 
 fn data_url(media_type: &str, bytes: &[u8]) -> String {
@@ -928,21 +515,6 @@ impl Answer {
     }
 }
 
-async fn post(account: &Account, path: &str, body: &str) -> Answer {
-    let response = http()
-        .post(format!("{}{path}", account.base_url()))
-        .header("content-type", "application/json")
-        .body(body.to_string())
-        .send()
-        .await
-        .unwrap();
-    Answer {
-        status: response.status(),
-        headers: response.headers().clone(),
-        body: response.bytes().await.unwrap().to_vec(),
-    }
-}
-
 impl Account {
     async fn brand_domain(&self, name: &str, tenant: Option<Id>) -> Id {
         self.registry_create_object(Domain {
@@ -957,22 +529,3 @@ impl Account {
         .await
     }
 }
-
-const ALARM_EVENT: &str = "BEGIN:VCALENDAR\r
-VERSION:2.0\r
-BEGIN:VEVENT\r
-UID:brand-alarm-1\r
-SUMMARY:<b>x</b>\r
-DESCRIPTION:Bring the slides.\r
-DTSTART:$START\r
-DTEND:$END\r
-LOCATION:Room 1\r
-CONFERENCE;VALUE=URI;FEATURE=VIDEO:https://meet.example.com/brand\r
-ATTENDEE;CN=Jane Guest:mailto:jane@example.net\r
-BEGIN:VALARM\r
-TRIGGER:-PT2S\r
-ACTION:EMAIL\r
-END:VALARM\r
-END:VEVENT\r
-END:VCALENDAR\r
-";

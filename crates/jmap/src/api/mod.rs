@@ -7,8 +7,7 @@
  */
 
 use crate::blob::UploadResponse;
-use calcard::jscalendar::JSCalendarDateTime;
-use common::ipc::{CalendarAlert, PushNotification};
+use common::ipc::PushNotification;
 use http_proto::{HttpResponse, JsonResponse, ToHttpResponse};
 use hyper::StatusCode;
 use jmap_proto::{
@@ -211,10 +210,6 @@ impl ToRequestError for trc::Error {
     }
 }
 
-pub(crate) trait IntoPushObject {
-    fn into_push_object(self) -> PushObject;
-}
-
 pub(crate) fn notifications_into_push_objects(
     notifications: Vec<PushNotification>,
 ) -> Vec<PushObject> {
@@ -228,9 +223,6 @@ pub(crate) fn notifications_into_push_objects(
                         .get_mut_or_insert(state_change.account_id.into())
                         .set(type_state, State::Exact(state_change.change_id));
                 }
-            }
-            PushNotification::CalendarAlert(calendar_alert) => {
-                objects.push(calendar_alert.into_push_object());
             }
             PushNotification::EmailPush(email_push) => {
                 let state_change = email_push.to_state_change();
@@ -247,18 +239,4 @@ pub(crate) fn notifications_into_push_objects(
         objects.push(PushObject::StateChange { changed });
     }
     objects
-}
-
-impl IntoPushObject for CalendarAlert {
-    fn into_push_object(self) -> PushObject {
-        PushObject::CalendarAlert {
-            account_id: self.account_id.into(),
-            calendar_event_id: self.event_id.into(),
-            uid: self.uid,
-            recurrence_id: self
-                .recurrence_id
-                .map(|timestamp| JSCalendarDateTime::new(timestamp, true).to_rfc3339()),
-            alert_id: self.alert_id,
-        }
-    }
 }

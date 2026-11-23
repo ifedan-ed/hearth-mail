@@ -23,15 +23,4 @@ pub enum PushObject {
         #[serde(skip_serializing_if = "Option::is_none")]
         state: Option<State>,
     },
-    CalendarAlert {
-        #[serde(rename = "accountId")]
-        account_id: Id,
-        #[serde(rename = "calendarEventId")]
-        calendar_event_id: Id,
-        uid: String,
-        #[serde(rename = "recurrenceId")]
-        recurrence_id: Option<String>,
-        #[serde(rename = "alertId")]
-        alert_id: String,
-    },
 }

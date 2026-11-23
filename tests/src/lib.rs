@@ -46,8 +46,6 @@ pub mod telemetry;
 #[cfg(test)]
 pub mod utils;
 #[cfg(test)]
-pub mod webdav;
-
 #[cfg(test)]
 pub trait AssertConfig {
     fn assert_no_errors(self) -> Self;

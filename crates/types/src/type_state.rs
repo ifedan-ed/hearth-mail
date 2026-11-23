@@ -39,26 +39,11 @@ pub enum DataType {
     Quota = 11,
     #[serde(rename = "SieveScript")]
     SieveScript = 12,
-    #[serde(rename = "Calendar")]
-    Calendar = 13,
-    #[serde(rename = "CalendarEvent")]
-    CalendarEvent = 14,
-    #[serde(rename = "CalendarEventNotification")]
-    CalendarEventNotification = 15,
-    #[serde(rename = "AddressBook")]
-    AddressBook = 16,
-    #[serde(rename = "ContactCard")]
-    ContactCard = 17,
-    #[serde(rename = "FileNode")]
-    FileNode = 18,
     #[serde(rename = "Principal")]
     Principal = 19,
     #[serde(rename = "ShareNotification")]
     ShareNotification = 20,
-    #[serde(rename = "ParticipantIdentity")]
-    ParticipantIdentity = 21,
-    #[serde(rename = "CalendarAlert")]
-    CalendarAlert = 22,
+    // 13 to 18, 21 and 22 were calendar, contact and file types (removed).
     None = 23,
 }
 
@@ -123,16 +108,8 @@ impl From<u64> for DataType {
             10 => DataType::Mdn,
             11 => DataType::Quota,
             12 => DataType::SieveScript,
-            13 => DataType::Calendar,
-            14 => DataType::CalendarEvent,
-            15 => DataType::CalendarEventNotification,
-            16 => DataType::AddressBook,
-            17 => DataType::ContactCard,
-            18 => DataType::FileNode,
             19 => DataType::Principal,
             20 => DataType::ShareNotification,
-            21 => DataType::ParticipantIdentity,
-            22 => DataType::CalendarAlert,
             _ => {
                 debug_assert!(false, "Invalid type_state value: {}", value);
                 DataType::None
@@ -153,11 +130,6 @@ impl DataType {
             (SyncCollection::Email, false) => DataType::Email.into(),
             (SyncCollection::Email, true) => DataType::Mailbox.into(),
             (SyncCollection::Thread, _) => DataType::Thread.into(),
-            (SyncCollection::Calendar, true) => DataType::Calendar.into(),
-            (SyncCollection::Calendar, false) => DataType::CalendarEvent.into(),
-            (SyncCollection::AddressBook, true) => DataType::AddressBook.into(),
-            (SyncCollection::AddressBook, false) => DataType::ContactCard.into(),
-            (SyncCollection::FileNode, _) => DataType::FileNode.into(),
             (SyncCollection::Identity, _) => DataType::Identity.into(),
             (SyncCollection::EmailSubmission, _) => DataType::EmailSubmission.into(),
             (SyncCollection::SieveScript, _) => DataType::SieveScript.into(),
@@ -182,16 +154,8 @@ impl DataType {
             b"MDN" => DataType::Mdn,
             b"Quota" => DataType::Quota,
             b"SieveScript" => DataType::SieveScript,
-            b"Calendar" => DataType::Calendar,
-            b"CalendarEvent" => DataType::CalendarEvent,
-            b"CalendarEventNotification" => DataType::CalendarEventNotification,
-            b"AddressBook" => DataType::AddressBook,
-            b"ContactCard" => DataType::ContactCard,
-            b"FileNode" => DataType::FileNode,
             b"Principal" => DataType::Principal,
             b"ShareNotification" => DataType::ShareNotification,
-            b"ParticipantIdentity" => DataType::ParticipantIdentity,
-            b"CalendarAlert" => DataType::CalendarAlert,
         )
     }
 
@@ -210,16 +174,8 @@ impl DataType {
             DataType::Mdn => "MDN",
             DataType::Quota => "Quota",
             DataType::SieveScript => "SieveScript",
-            DataType::Calendar => "Calendar",
-            DataType::CalendarEvent => "CalendarEvent",
-            DataType::CalendarEventNotification => "CalendarEventNotification",
-            DataType::AddressBook => "AddressBook",
-            DataType::ContactCard => "ContactCard",
-            DataType::FileNode => "FileNode",
             DataType::Principal => "Principal",
             DataType::ShareNotification => "ShareNotification",
-            DataType::ParticipantIdentity => "ParticipantIdentity",
-            DataType::CalendarAlert => "CalendarAlert",
             DataType::None => "",
         }
     }

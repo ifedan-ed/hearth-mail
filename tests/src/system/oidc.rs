@@ -214,12 +214,7 @@ pub async fn test(test: &mut TestServer) {
             .any(|m| m == "S256")
     );
     assert!(metadata.authorization_response_iss_parameter_supported);
-    for scope in [
-        "urn:ietf:params:oauth:scope:mail",
-        "urn:ietf:params:oauth:scope:contacts",
-        "urn:ietf:params:oauth:scope:calendars",
-        "offline_access",
-    ] {
+    for scope in ["urn:ietf:params:oauth:scope:mail", "offline_access"] {
         assert!(
             metadata.scopes_supported.iter().any(|s| s == scope),
             "missing scope {scope}"

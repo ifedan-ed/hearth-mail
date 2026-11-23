@@ -158,31 +158,7 @@ impl Response<'_> {
                             response.eval_jptr(path, &mut results)
                         }
                         GetResponseMethod::Blob(response) => response.eval_jptr(path, &mut results),
-                        GetResponseMethod::AddressBook(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        GetResponseMethod::ContactCard(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        GetResponseMethod::FileNode(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        GetResponseMethod::Calendar(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        GetResponseMethod::CalendarEvent(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        GetResponseMethod::CalendarEventNotification(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        GetResponseMethod::ParticipantIdentity(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
                         GetResponseMethod::ShareNotification(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        GetResponseMethod::PrincipalAvailability(response) => {
                             response.eval_jptr(path, &mut results)
                         }
                         GetResponseMethod::Registry(response) => {
@@ -206,24 +182,6 @@ impl Response<'_> {
                             response.eval_jptr(path, &mut results)
                         }
                         ChangesResponseMethod::Quota(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        ChangesResponseMethod::AddressBook(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        ChangesResponseMethod::ContactCard(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        ChangesResponseMethod::FileNode(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        ChangesResponseMethod::Calendar(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        ChangesResponseMethod::CalendarEvent(response) => {
-                            response.eval_jptr(path, &mut results)
-                        }
-                        ChangesResponseMethod::CalendarEventNotification(response) => {
                             response.eval_jptr(path, &mut results)
                         }
                         ChangesResponseMethod::ShareNotification(response) => {

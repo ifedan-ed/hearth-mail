@@ -330,14 +330,10 @@ pub fn write_reload_target(object: ObjectType) -> Option<ObjectType> {
         // reload doesn't touch them
         ObjectType::AllowedIp
         | ObjectType::AcmeProvider
-        | ObjectType::AddressBook
         | ObjectType::AiModel
         | ObjectType::Asn
         | ObjectType::Authentication
         | ObjectType::Cache
-        | ObjectType::Calendar
-        | ObjectType::CalendarAlarm
-        | ObjectType::CalendarScheduling
         | ObjectType::ClusterRole
         | ObjectType::DataRetention
         | ObjectType::Directory
@@ -347,7 +343,6 @@ pub fn write_reload_target(object: ObjectType) -> Option<ObjectType> {
         | ObjectType::DsnReportSettings
         | ObjectType::Email
         | ObjectType::EventTracingLevel
-        | ObjectType::FileStorage
         | ObjectType::Http
         | ObjectType::HttpForm
         | ObjectType::Imap
@@ -397,7 +392,6 @@ pub fn write_reload_target(object: ObjectType) -> Option<ObjectType> {
         | ObjectType::TaskManager
         | ObjectType::TlsReportSettings
         | ObjectType::Tracer
-        | ObjectType::WebDav
         | ObjectType::WebHook => Some(object),
         _ => None,
     }

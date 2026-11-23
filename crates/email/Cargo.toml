@@ -12,7 +12,6 @@ types = { path = "../types" }
 jmap_proto = { path = "../jmap-proto" }
 jmap-tools = { version = "0.1" }
 common = { path =  "../common" }
-groupware = { path =  "../groupware" }
 registry = { path =  "../registry" }
 inbuxa-features = { path = "../features" }
 mail-parser = { version = "0.11", features = ["full_encoding"] } 

@@ -7,10 +7,7 @@
 use crate::{
     SearchStore,
     backend::meili::{MeiliSearchStore, Task, TaskStatus, TaskUid},
-    search::{
-        CalendarSearchField, ContactSearchField, EmailSearchField, SearchField, SearchableField,
-        TracingSearchField,
-    },
+    search::{EmailSearchField, SearchField, SearchableField, TracingSearchField},
 };
 use registry::schema::structs;
 use reqwest::{Error, Response, Url};
@@ -56,8 +53,6 @@ impl MeiliSearchStore {
 
     pub async fn create_indexes(&self) -> trc::Result<()> {
         self.create_index::<EmailSearchField>().await?;
-        self.create_index::<CalendarSearchField>().await?;
-        self.create_index::<ContactSearchField>().await?;
         self.create_index::<TracingSearchField>().await?;
         Ok(())
     }
@@ -202,12 +197,7 @@ impl MeiliSearchStore {
     pub async fn drop_indexes(&self) -> trc::Result<()> {
         use crate::write::SearchIndex;
 
-        for index in &[
-            SearchIndex::Email,
-            SearchIndex::Calendar,
-            SearchIndex::Contacts,
-            SearchIndex::Tracing,
-        ] {
+        for index in &[SearchIndex::Email, SearchIndex::Tracing] {
             let response = self
                 .client
                 .delete(format!("{}/indexes/{}", self.url, index.index_name()))

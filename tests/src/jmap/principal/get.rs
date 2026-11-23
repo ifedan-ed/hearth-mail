@@ -45,14 +45,8 @@ pub async fn test(test: &TestServer) {
           ]
         },
         "urn:ietf:params:jmap:mail": {},
-        "urn:ietf:params:jmap:calendars": {},
-        "urn:ietf:params:jmap:calendars:parse": {},
-        "urn:ietf:params:jmap:contacts": {},
-        "urn:ietf:params:jmap:contacts:parse": {},
         "urn:ietf:params:jmap:emailpush": {},
-        "urn:ietf:params:jmap:filenode": {},
         "urn:ietf:params:jmap:principals": {},
-        "urn:ietf:params:jmap:principals:availability": {},
         "urn:ietf:params:jmap:submission": {},
         "urn:ietf:params:jmap:vacationresponse": {},
         "urn:ietf:params:jmap:sieve": {
@@ -110,21 +104,7 @@ pub async fn test(test: &TestServer) {
               }
             },
             "urn:ietf:params:jmap:vacationresponse": {},
-            "urn:ietf:params:jmap:contacts": {
-              "maxAddressBooksPerCard": null,
-              "mayCreateAddressBook": true
-            },
-            "urn:ietf:params:jmap:contacts:parse": {},
             "urn:ietf:params:jmap:emailpush": {},
-            "urn:ietf:params:jmap:calendars": {
-              "maxCalendarsPerEvent": null,
-              "minDateTime": "0001-01-01T00:00:00Z",
-              "maxDateTime": "9999-12-31T23:59:59Z",
-              "maxExpandedQueryDuration": "P52W1D",
-              "maxParticipantsPerEvent": 20,
-              "mayCreateCalendar": true
-            },
-            "urn:ietf:params:jmap:calendars:parse": {},
             "urn:ietf:params:jmap:websocket": {},
             "urn:ietf:params:jmap:sieve": {
               "maxSizeScriptName": 512,
@@ -203,52 +183,6 @@ pub async fn test(test: &TestServer) {
             "urn:ietf:params:jmap:principals": {
               "currentUserPrincipalId": john_id
             },
-            "urn:ietf:params:jmap:principals:availability": {
-              "maxAvailabilityDuration": "P52W1D",
-            },
-            "urn:ietf:params:jmap:filenode": {
-              "maxFileNodeDepth": null,
-              "maxSizeFileNodeName": 255,
-              "forbiddenNameChars": "/<>:\"\\|?*",
-              "forbiddenNodeNames": [
-                ".",
-                "..",
-                "CON",
-                "PRN",
-                "AUX",
-                "NUL",
-                "COM0",
-                "COM1",
-                "COM2",
-                "COM3",
-                "COM4",
-                "COM5",
-                "COM6",
-                "COM7",
-                "COM8",
-                "COM9",
-                "LPT0",
-                "LPT1",
-                "LPT2",
-                "LPT3",
-                "LPT4",
-                "LPT5",
-                "LPT6",
-                "LPT7",
-                "LPT8",
-                "LPT9"
-              ],
-              "fileNodeQuerySortOptions": [
-                "name",
-                "size",
-                "nodeType"
-              ],
-              "mayCreateTopLevelFileNode": true,
-              "caseInsensitiveNames": false,
-              "webTrashUrl": null,
-              "webUrlTemplate": null,
-              "webWriteUrlTemplate": null
-            },
             "urn:ietf:params:jmap:mail:share": {},
             "urn:inbuxa:jmap:registry": {},
             // inbuxa: MT-22, the logo that applies to the account, and
@@ -263,18 +197,12 @@ pub async fn test(test: &TestServer) {
         "urn:ietf:params:jmap:mail": john_id,
         "urn:ietf:params:jmap:submission": john_id,
         "urn:ietf:params:jmap:vacationresponse": john_id,
-        "urn:ietf:params:jmap:contacts": john_id,
-        "urn:ietf:params:jmap:contacts:parse": john_id,
         "urn:ietf:params:jmap:emailpush": john_id,
-        "urn:ietf:params:jmap:calendars": john_id,
-        "urn:ietf:params:jmap:calendars:parse": john_id,
         "urn:ietf:params:jmap:websocket": john_id,
         "urn:ietf:params:jmap:sieve": john_id,
         "urn:ietf:params:jmap:blob": john_id,
         "urn:ietf:params:jmap:quota": john_id,
         "urn:ietf:params:jmap:principals": john_id,
-        "urn:ietf:params:jmap:principals:availability": john_id,
-        "urn:ietf:params:jmap:filenode": john_id,
         "urn:ietf:params:jmap:mail:share": john_id,
         "urn:inbuxa:jmap:registry": john_id,
         "https://www.fastmail.com/dev/maskedemail": john_id
@@ -357,22 +285,11 @@ pub async fn test(test: &TestServer) {
       "timezone": null,
       "capabilities": {
         "urn:ietf:params:jmap:mail": {},
-        "urn:ietf:params:jmap:contacts": {},
-        "urn:ietf:params:jmap:calendars": {},
-        "urn:ietf:params:jmap:filenode": {},
         "urn:ietf:params:jmap:principals": {}
       },
       "accounts": {
         john_id: {
           "urn:ietf:params:jmap:mail": {},
-          "urn:ietf:params:jmap:contacts": {},
-          "urn:ietf:params:jmap:calendars": {
-            "accountId": john_id,
-            "mayGetAvailability": true,
-            "mayShareWith": true,
-            "calendarAddress": "mailto:jdoe@example.com"
-          },
-          "urn:ietf:params:jmap:filenode": {},
           "urn:ietf:params:jmap:principals": {},
           "urn:ietf:params:jmap:principals:owner": {
             "accountIdForPrincipal": john_id,
@@ -390,22 +307,11 @@ pub async fn test(test: &TestServer) {
       "timezone": null,
       "capabilities": {
         "urn:ietf:params:jmap:mail": {},
-        "urn:ietf:params:jmap:contacts": {},
-        "urn:ietf:params:jmap:calendars": {},
-        "urn:ietf:params:jmap:filenode": {},
         "urn:ietf:params:jmap:principals": {}
       },
       "accounts": {
         jane_id: {
           "urn:ietf:params:jmap:mail": {},
-          "urn:ietf:params:jmap:contacts": {},
-          "urn:ietf:params:jmap:calendars": {
-            "accountId": jane_id,
-            "mayGetAvailability": true,
-            "mayShareWith": true,
-            "calendarAddress": "mailto:jane.smith@example.com"
-          },
-          "urn:ietf:params:jmap:filenode": {},
           "urn:ietf:params:jmap:principals": {},
           "urn:ietf:params:jmap:principals:owner": {
             "accountIdForPrincipal": jane_id,
@@ -423,22 +329,11 @@ pub async fn test(test: &TestServer) {
       "timezone": null,
       "capabilities": {
         "urn:ietf:params:jmap:mail": {},
-        "urn:ietf:params:jmap:contacts": {},
-        "urn:ietf:params:jmap:calendars": {},
-        "urn:ietf:params:jmap:filenode": {},
         "urn:ietf:params:jmap:principals": {}
       },
       "accounts": {
         bill_id: {
           "urn:ietf:params:jmap:mail": {},
-          "urn:ietf:params:jmap:contacts": {},
-          "urn:ietf:params:jmap:calendars": {
-            "accountId": bill_id,
-            "mayGetAvailability": true,
-            "mayShareWith": true,
-            "calendarAddress": "mailto:bill@example.com"
-          },
-          "urn:ietf:params:jmap:filenode": {},
           "urn:ietf:params:jmap:principals": {},
           "urn:ietf:params:jmap:principals:owner": {
             "accountIdForPrincipal": bill_id,
@@ -456,22 +351,11 @@ pub async fn test(test: &TestServer) {
       "timezone": null,
       "capabilities": {
         "urn:ietf:params:jmap:mail": {},
-        "urn:ietf:params:jmap:contacts": {},
-        "urn:ietf:params:jmap:calendars": {},
-        "urn:ietf:params:jmap:filenode": {},
         "urn:ietf:params:jmap:principals": {}
       },
       "accounts": {
         sales_id: {
           "urn:ietf:params:jmap:mail": {},
-          "urn:ietf:params:jmap:contacts": {},
-          "urn:ietf:params:jmap:calendars": {
-            "accountId": sales_id,
-            "mayGetAvailability": true,
-            "mayShareWith": true,
-            "calendarAddress": "mailto:sales@example.com"
-          },
-          "urn:ietf:params:jmap:filenode": {},
           "urn:ietf:params:jmap:principals": {},
           "urn:ietf:params:jmap:principals:owner": {
             "accountIdForPrincipal": sales_id,

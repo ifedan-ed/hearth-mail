@@ -29,13 +29,10 @@ pub const SCOPE_MAIL: &str = "urn:ietf:params:oauth:scope:mail";
 pub const SCOPE_CONTACTS: &str = "urn:ietf:params:oauth:scope:contacts";
 pub const SCOPE_CALENDARS: &str = "urn:ietf:params:oauth:scope:calendars";
 
-pub const SUPPORTED_SCOPES: &[&str] = &[
-    SCOPE_OPENID,
-    SCOPE_OFFLINE_ACCESS,
-    SCOPE_MAIL,
-    SCOPE_CONTACTS,
-    SCOPE_CALENDARS,
-];
+/// The scopes the server advertises. The contacts and calendars scopes are
+/// left out: Hearth Mail serves neither. They keep their bits in
+/// `client_id::SCOPE_BITS`, which sealed client ids already carry.
+pub const SUPPORTED_SCOPES: &[&str] = &[SCOPE_OPENID, SCOPE_OFFLINE_ACCESS, SCOPE_MAIL];
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum GrantType {

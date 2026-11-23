@@ -118,7 +118,6 @@ impl<T: SessionStream> Session<T> {
                                 has_email_changes = true;
                                 has_mailbox_changes = true;
                             },
-                            PushNotification::CalendarAlert(_) => (),
                         }
 
                         if has_mailbox_changes || has_email_changes {

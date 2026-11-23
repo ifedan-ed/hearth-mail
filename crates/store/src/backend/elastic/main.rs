@@ -9,10 +9,7 @@ use std::sync::Arc;
 use crate::{
     SearchStore,
     backend::elastic::ElasticSearchStore,
-    search::{
-        CalendarSearchField, ContactSearchField, EmailSearchField, SearchableField,
-        TracingSearchField,
-    },
+    search::{EmailSearchField, SearchableField, TracingSearchField},
 };
 use registry::schema::structs;
 use reqwest::{Error, Response, Url};
@@ -41,8 +38,6 @@ impl ElasticSearchStore {
 
     pub async fn create_indexes(&self) -> trc::Result<()> {
         self.create_index::<EmailSearchField>().await?;
-        self.create_index::<CalendarSearchField>().await?;
-        self.create_index::<ContactSearchField>().await?;
         self.create_index::<TracingSearchField>().await?;
         Ok(())
     }
@@ -117,12 +112,7 @@ impl ElasticSearchStore {
     pub async fn drop_indexes(&self) -> trc::Result<()> {
         use crate::write::SearchIndex;
 
-        for index in &[
-            SearchIndex::Email,
-            SearchIndex::Calendar,
-            SearchIndex::Contacts,
-            SearchIndex::Tracing,
-        ] {
+        for index in &[SearchIndex::Email, SearchIndex::Tracing] {
             assert_success(
                 self.client
                     .delete(format!("{}/{}", self.url, index.index_name()))

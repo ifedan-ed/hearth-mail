@@ -158,10 +158,7 @@ pub(crate) async fn task_set(
                 batch.schedule_task_with_id(task_id, task).commit_point();
                 set.response.created(id, task_id);
             }
-            TaskType::CalendarAlarmEmail
-            | TaskType::CalendarAlarmNotification
-            | TaskType::CalendarItipMessage
-            | TaskType::MergeThreads
+            TaskType::MergeThreads
             | TaskType::DmarcReport
             | TaskType::TlsReport
             | TaskType::DestroyAccount

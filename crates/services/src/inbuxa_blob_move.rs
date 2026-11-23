@@ -350,10 +350,7 @@ impl Holder {
             }) => Holder {
                 name: match Collection::from(*collection) {
                     Collection::Email => "email".into(),
-                    Collection::FileNode => "file".into(),
                     Collection::SieveScript => "sieveScript".into(),
-                    Collection::CalendarEvent => "calendarEvent".into(),
-                    Collection::ContactCard => "contactCard".into(),
                     _ => format!("collection{collection}"),
                 },
                 account_id: Some(*account_id),

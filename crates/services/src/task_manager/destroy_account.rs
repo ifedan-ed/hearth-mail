@@ -9,7 +9,6 @@
 use crate::task_manager::{TaskResult, deferred_retry_time};
 use common::Server;
 use email::{message::metadata::MessageMetadata, sieve::SieveScript};
-use groupware::file::FileNode;
 use registry::{
     schema::{
         prelude::{ObjectType, Property},
@@ -165,11 +164,7 @@ async fn destroy_account(server: &Server, task: &TaskDestroyAccount) -> trc::Res
     }
 
     // Remove search index
-    for index in [
-        SearchIndex::Email,
-        SearchIndex::Contacts,
-        SearchIndex::Calendar,
-    ] {
+    for index in [SearchIndex::Email] {
         server
             .search_store()
             .unindex(SearchQuery::new(index).with_account_id(account_id))
@@ -222,7 +217,6 @@ pub async fn destroy_account_blobs(server: &Server, account_id: u32) -> trc::Res
     let mut delete_keys = Vec::new();
     for (collection, field) in [
         (Collection::Email, u8::from(EmailField::Metadata)),
-        (Collection::FileNode, u8::from(Field::ARCHIVE)),
         (Collection::SieveScript, u8::from(Field::ARCHIVE)),
     ] {
         server
@@ -235,15 +229,6 @@ pub async fn destroy_account_blobs(server: &Server, account_id: u32) -> trc::Res
                             document_id,
                             BlobHash::from(&message.blob_hash),
                         ));
-                    }
-                    Collection::FileNode => {
-                        if let Some(file) = archive.unarchive::<FileNode>()?.file.as_ref() {
-                            delete_keys.push((
-                                collection,
-                                document_id,
-                                BlobHash::from(&file.blob_hash),
-                            ));
-                        }
                     }
                     Collection::SieveScript => {
                         let sieve = archive.unarchive::<SieveScript>()?;

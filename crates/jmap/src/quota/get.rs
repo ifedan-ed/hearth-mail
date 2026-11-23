@@ -101,9 +101,6 @@ impl QuotaGet for Server {
                     QuotaProperty::Types => vec![
                         Value::Element(QuotaValue::Types(DataType::Email)),
                         Value::Element(QuotaValue::Types(DataType::SieveScript)),
-                        Value::Element(QuotaValue::Types(DataType::FileNode)),
-                        Value::Element(QuotaValue::Types(DataType::CalendarEvent)),
-                        Value::Element(QuotaValue::Types(DataType::ContactCard)),
                     ]
                     .into(),
 

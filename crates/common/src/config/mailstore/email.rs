@@ -10,14 +10,11 @@ use ahash::{AHashMap, AHashSet};
 use nlp::language::Language;
 use registry::{
     schema::{
-        enums::{
-            CompressionAlgo, SearchCalendarField, SearchContactField, SearchEmailField,
-            StorageQuota,
-        },
+        enums::{CompressionAlgo, SearchEmailField, StorageQuota},
         prelude::ObjectType,
         structs::{
-            AddressBook, Authentication, Calendar, DataRetention, Domain, Email, FileStorage, Jmap,
-            Search, SieveUserInterpreter, SystemSettings,
+            Authentication, DataRetention, Domain, Email, Jmap, Search, SieveUserInterpreter,
+            SystemSettings,
         },
     },
     types::EnumImpl,
@@ -25,7 +22,7 @@ use registry::{
 use std::time::Duration;
 use store::{
     registry::bootstrap::Bootstrap,
-    search::{CalendarSearchField, ContactSearchField, EmailSearchField, SearchField},
+    search::{EmailSearchField, SearchField},
     write::SearchIndex,
 };
 use types::special_use::SpecialUse;
@@ -85,9 +82,6 @@ impl EmailConfig {
         let sieve = bp.setting_infallible::<SieveUserInterpreter>().await;
         let search = bp.setting_infallible::<Search>().await;
         let jmap = bp.setting_infallible::<Jmap>().await;
-        let file = bp.setting_infallible::<FileStorage>().await;
-        let calendar = bp.setting_infallible::<Calendar>().await;
-        let address_book = bp.setting_infallible::<AddressBook>().await;
         let system = bp.setting_infallible::<SystemSettings>().await;
         let auth = bp.setting_infallible::<Authentication>().await;
 
@@ -123,23 +117,6 @@ impl EmailConfig {
             (StorageQuota::MaxApiKeys, auth.max_api_keys),
             (StorageQuota::MaxPublicKeys, email.max_public_keys),
             (StorageQuota::MaxPushSubscriptions, jmap.max_subscriptions),
-            (StorageQuota::MaxCalendars, calendar.max_calendars),
-            (StorageQuota::MaxCalendarEvents, calendar.max_events),
-            (
-                StorageQuota::MaxParticipantIdentities,
-                calendar.max_participant_identities,
-            ),
-            (
-                StorageQuota::MaxCalendarEventNotifications,
-                calendar.max_event_notifications,
-            ),
-            (
-                StorageQuota::MaxAddressBooks,
-                address_book.max_address_books,
-            ),
-            (StorageQuota::MaxContactCards, address_book.max_contacts),
-            (StorageQuota::MaxFiles, file.max_files),
-            (StorageQuota::MaxFolders, file.max_folders),
         ] {
             if let Some(max) = max {
                 max_objects.set(item, max as u32);
@@ -236,51 +213,6 @@ impl EmailConfig {
                     .collect(),
             );
         }
-        if search.index_contacts {
-            index_fields.insert(
-                SearchIndex::Contacts,
-                search
-                    .index_contact_fields
-                    .into_iter()
-                    .map(|field| {
-                        SearchField::Contact(match field {
-                            SearchContactField::Member => ContactSearchField::Member,
-                            SearchContactField::Kind => ContactSearchField::Kind,
-                            SearchContactField::Name => ContactSearchField::Name,
-                            SearchContactField::Nickname => ContactSearchField::Nickname,
-                            SearchContactField::Organization => ContactSearchField::Organization,
-                            SearchContactField::Email => ContactSearchField::Email,
-                            SearchContactField::Phone => ContactSearchField::Phone,
-                            SearchContactField::OnlineService => ContactSearchField::OnlineService,
-                            SearchContactField::Address => ContactSearchField::Address,
-                            SearchContactField::Note => ContactSearchField::Note,
-                            SearchContactField::Uid => ContactSearchField::Uid,
-                        })
-                    })
-                    .collect(),
-            );
-        }
-        if search.index_calendar {
-            index_fields.insert(
-                SearchIndex::Calendar,
-                search
-                    .index_calendar_fields
-                    .into_iter()
-                    .map(|field| {
-                        SearchField::Calendar(match field {
-                            SearchCalendarField::Title => CalendarSearchField::Title,
-                            SearchCalendarField::Description => CalendarSearchField::Description,
-                            SearchCalendarField::Location => CalendarSearchField::Location,
-                            SearchCalendarField::Owner => CalendarSearchField::Owner,
-                            SearchCalendarField::Attendee => CalendarSearchField::Attendee,
-                            SearchCalendarField::Start => CalendarSearchField::Start,
-                            SearchCalendarField::Uid => CalendarSearchField::Uid,
-                        })
-                    })
-                    .collect(),
-            );
-        }
-
         EmailConfig {
             default_language: Language::from_iso_639(search.default_language.as_str())
                 .unwrap_or(Language::English),

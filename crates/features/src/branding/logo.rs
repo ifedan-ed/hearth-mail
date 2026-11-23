@@ -34,19 +34,6 @@ pub enum Logo {
     },
 }
 
-impl Logo {
-    /// Whether mail can carry it inline: PNG, JPEG or GIF only (BT-9).
-    pub fn is_embeddable(&self) -> bool {
-        matches!(
-            self,
-            Logo::Image {
-                content_type: "image/png" | "image/jpeg" | "image/gif",
-                ..
-            }
-        )
-    }
-}
-
 /// The type an image's bytes show, if one of `TYPES`.
 pub fn sniff(bytes: &[u8]) -> Option<&'static str> {
     if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
@@ -301,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn chain_order_and_embedding() {
+    fn chain_order() {
         let png = data("image/png", PNG);
         let svg = data(
             "image/svg+xml",
@@ -313,8 +300,20 @@ mod tests {
             (Source::Server, Some(png.as_str())),
         ]);
         assert_eq!(logos.len(), 2);
-        assert!(!logos[0].is_embeddable());
-        assert!(logos[1].is_embeddable());
+        assert!(matches!(
+            &logos[0],
+            Logo::Image {
+                content_type: "image/svg+xml",
+                ..
+            }
+        ));
+        assert!(matches!(
+            &logos[1],
+            Logo::Image {
+                content_type: "image/png",
+                ..
+            }
+        ));
     }
 
     #[test]

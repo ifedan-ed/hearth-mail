@@ -59,7 +59,7 @@ impl SieveScriptDelete for Server {
                     .await?
                     .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
                     .unwrap_or_default();
-                inbuxa_features::undelete::groupware::archive_sieve(
+                inbuxa_features::undelete::sieve::archive_sieve(
                     &self.core.storage.data,
                     self.registry(),
                     account_id,

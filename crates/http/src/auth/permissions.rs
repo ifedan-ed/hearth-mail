@@ -82,7 +82,6 @@ impl AccountApiHandler for Server {
                     Permission::JmapPrincipalQuery,
                     Permission::JmapPrincipalQueryChanges,
                     Permission::JmapPrincipalGet,
-                    Permission::JmapPrincipalGetAvailability,
                     Permission::JmapPrincipalChanges,
                 ] {
                     permissions.clear(p.to_id() as usize);

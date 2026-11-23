@@ -14,13 +14,11 @@ use crate::utils::{
     pop3::{self, Pop3Connection},
     server::{TestServer, TestServerBuilder},
     smtp::SmtpConnection,
-    webdav::DummyWebDavClient,
 };
 use email::{
     mailbox::{INBOX_ID, TRASH_ID},
     message::delete::EmailDeletion,
 };
-use hyper::StatusCode;
 use imap_proto::ResponseType;
 use jmap_client::client::{Client, Credentials};
 use jmap_proto::error::set::SetErrorType;
@@ -43,8 +41,6 @@ use store::{
 use types::id::Id;
 
 const SECRET: &str = "undelete test user passphrase";
-const EVENT: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:test\r\nBEGIN:VEVENT\r\nUID:lunch-1\r\nDTSTAMP:20260918T100000Z\r\nDTSTART:20260918T120000Z\r\nDTEND:20260918T130000Z\r\nSUMMARY:Lunch\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
-const CARD: &str = "BEGIN:VCARD\r\nVERSION:4.0\r\nUID:jane-1\r\nFN:Jane Doe\r\nEND:VCARD\r\n";
 const DAY: u64 = 86_400;
 
 pub async fn test(test: &mut TestServer) {
@@ -358,71 +354,25 @@ pub async fn test(test: &mut TestServer) {
         "test 15"
     );
 
-    // Acceptance test 6: a file, event, contact and script each come back to
-    // the right place (UD-1, UD-8)
-    let dav = DummyWebDavClient::new(
-        user.id().document_id(),
-        "undelete@example.org",
-        SECRET,
-        "undelete@example.org",
-    );
-    let home = "undelete%40example.org";
-    dav.mkcol("MKCOL", &format!("/dav/file/{home}/Folder/"), [], [])
-        .await
-        .with_status(StatusCode::CREATED);
-    let file = format!("/dav/file/{home}/Folder/notes.txt");
-    let event = format!("/dav/cal/{home}/default/lunch.ics");
-    let card = format!("/dav/card/{home}/default/jane.vcf");
-    for (path, body) in [
-        (&file, "Some notes.".to_string()),
-        (&event, EVENT.to_string()),
-        (&card, CARD.to_string()),
-    ] {
-        dav.request("PUT", path, body)
-            .await
-            .with_status(StatusCode::CREATED);
-    }
+    // Acceptance test 6: a deleted script comes back, inactive (UD-1, UD-8).
+    // Files, events and contacts were part of this test; they went with
+    // calendars, contacts and files.
     let script = client
         .sieve_script_create("Filters", b"keep;".to_vec(), true)
         .await
         .unwrap()
         .take_id();
-    for path in [&file, &event, &card] {
-        dav.request("DELETE", path, "")
-            .await
-            .with_status(StatusCode::NO_CONTENT);
-    }
     client.sieve_script_deactivate().await.unwrap();
     client.sieve_script_destroy(&script).await.unwrap();
     test.wait_for_tasks().await;
-    // A new file takes the old name, so the restored one is renamed
-    dav.request("PUT", &file, "Newer notes.")
+    let item = user
+        .archived()
         .await
-        .with_status(StatusCode::CREATED);
-    for kind in ["FileNode", "CalendarEvent", "ContactCard", "SieveScript"] {
-        let item = user
-            .archived()
-            .await
-            .into_iter()
-            .find(|item| item["@type"] == kind)
-            .unwrap_or_else(|| panic!("test 6: no archived {kind}"));
-        user.request_restore(item.object_id()).await;
-    }
+        .into_iter()
+        .find(|item| item["@type"] == "SieveScript")
+        .unwrap_or_else(|| panic!("test 6: no archived SieveScript"));
+    user.request_restore(item.object_id()).await;
     test.wait_for_tasks().await;
-    dav.request(
-        "GET",
-        &format!("/dav/file/{home}/Folder/notes%20%28restored%29.txt"),
-        "",
-    )
-    .await
-    .with_status(StatusCode::OK)
-    .with_body("Some notes.");
-    dav.request("GET", &event, "")
-        .await
-        .with_status(StatusCode::OK);
-    dav.request("GET", &card, "")
-        .await
-        .with_status(StatusCode::OK);
     let restored = client
         .sieve_script_query(
             jmap_client::sieve::query::Filter::name("Filters").into(),

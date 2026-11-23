@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::api::IntoPushObject;
 use common::{LONG_1D_SLUMBER, Server, auth::AccessToken, ipc::PushNotification};
 use http_body_util::{StreamBody, combinators::BoxBody};
 use http_proto::*;
@@ -119,12 +118,6 @@ impl EventSourceHandler for Server {
                                             .get_mut_or_insert(state_change.account_id.into())
                                             .set(type_state, State::Exact(state_change.change_id));
                                     }
-                                }
-                                PushNotification::CalendarAlert(calendar_alert) => {
-                                    yield Ok(Frame::data(Bytes::from(format!(
-                                        "event: calendarAlert\ndata: {}\n\n",
-                                        serde_json::to_string(&calendar_alert.into_push_object()).unwrap()
-                                    ))));
                                 }
                                 PushNotification::EmailPush(email_push) => {
                                     let state_change = email_push.to_state_change();

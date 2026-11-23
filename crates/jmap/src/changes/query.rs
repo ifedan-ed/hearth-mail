@@ -6,11 +6,8 @@
 
 use super::get::ChangesLookup;
 use crate::{
-    api::request::resolve_account_id, calendar_event::query::CalendarEventQuery,
-    calendar_event_notification::query::CalendarEventNotificationQuery,
-    contact::query::ContactCardQuery, email::query::EmailQuery, file::query::FileNodeQuery,
-    mailbox::query::MailboxQuery, share_notification::query::ShareNotificationQuery,
-    submission::query::EmailSubmissionQuery,
+    api::request::resolve_account_id, email::query::EmailQuery, mailbox::query::MailboxQuery,
+    share_notification::query::ShareNotificationQuery, submission::query::EmailSubmissionQuery,
 };
 use common::{Server, auth::AccessToken};
 use jmap_proto::{
@@ -120,118 +117,6 @@ impl QueryChanges for Server {
 
                 up_to_id = request.up_to_id;
                 results = self.email_submission_query((*request).into()).await?;
-            }
-            QueryChangesRequestMethod::ContactCard(mut request) => {
-                // Query changes
-                resolve_account_id(
-                    &mut request.account_id,
-                    MethodObject::ContactCard,
-                    access_token,
-                )?;
-                changes = self
-                    .changes(
-                        build_changes_request(&request),
-                        MethodObject::ContactCard,
-                        access_token,
-                    )
-                    .await?
-                    .response;
-                let calculate_total = request.calculate_total.unwrap_or(false);
-                has_changes = changes.has_changes();
-                response = build_query_changes_response(&request, &changes);
-
-                if !has_changes && !calculate_total {
-                    return Ok(response);
-                }
-
-                up_to_id = request.up_to_id;
-                results = self
-                    .contact_card_query((*request).into(), access_token)
-                    .await?;
-            }
-            QueryChangesRequestMethod::FileNode(mut request) => {
-                // Query changes
-                resolve_account_id(
-                    &mut request.account_id,
-                    MethodObject::FileNode,
-                    access_token,
-                )?;
-                changes = self
-                    .changes(
-                        build_changes_request(&request),
-                        MethodObject::FileNode,
-                        access_token,
-                    )
-                    .await?
-                    .response;
-                let calculate_total = request.calculate_total.unwrap_or(false);
-                has_changes = changes.has_changes();
-                response = build_query_changes_response(&request, &changes);
-
-                if !has_changes && !calculate_total {
-                    return Ok(response);
-                }
-
-                up_to_id = request.up_to_id;
-                results = self
-                    .file_node_query((*request).into(), access_token)
-                    .await?;
-            }
-            QueryChangesRequestMethod::CalendarEvent(mut request) => {
-                // Query changes
-                resolve_account_id(
-                    &mut request.account_id,
-                    MethodObject::CalendarEvent,
-                    access_token,
-                )?;
-                changes = self
-                    .changes(
-                        build_changes_request(&request),
-                        MethodObject::CalendarEvent,
-                        access_token,
-                    )
-                    .await?
-                    .response;
-                let calculate_total = request.calculate_total.unwrap_or(false);
-                has_changes = changes.has_changes();
-                response = build_query_changes_response(&request, &changes);
-
-                if !has_changes && !calculate_total {
-                    return Ok(response);
-                }
-
-                up_to_id = request.up_to_id;
-                results = self
-                    .calendar_event_query((*request).into(), access_token)
-                    .await?;
-            }
-            QueryChangesRequestMethod::CalendarEventNotification(mut request) => {
-                // Query changes
-                resolve_account_id(
-                    &mut request.account_id,
-                    MethodObject::CalendarEventNotification,
-                    access_token,
-                )?;
-                changes = self
-                    .changes(
-                        build_changes_request(&request),
-                        MethodObject::CalendarEventNotification,
-                        access_token,
-                    )
-                    .await?
-                    .response;
-                let calculate_total = request.calculate_total.unwrap_or(false);
-                has_changes = changes.has_changes();
-                response = build_query_changes_response(&request, &changes);
-
-                if !has_changes && !calculate_total {
-                    return Ok(response);
-                }
-
-                up_to_id = request.up_to_id;
-                results = self
-                    .calendar_event_notification_query((*request).into(), access_token)
-                    .await?;
             }
             QueryChangesRequestMethod::ShareNotification(mut request) => {
                 // Query changes

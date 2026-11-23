@@ -27,8 +27,6 @@ use common::{
     manager::application::Resource,
     network::{SessionData, SessionManager, SessionStream},
 };
-use dav::{DavMethod, request::DavRequestHandler};
-use groupware::DavResourceName;
 use http_proto::{
     DownloadResponse, HttpContext, HttpRequest, HttpResponse, HttpResponseBody, HttpSessionData,
     JsonProblemResponse, ToHttpResponse, form_urlencoded, request::fetch_body,
@@ -56,11 +54,6 @@ use store::dispatch::lookup::KeyValue;
 use tokio::io::{AsyncRead, AsyncWrite};
 use trc::SecurityEvent;
 use types::{blob::BlobId, id::Id};
-
-static RSVP_PAGE: &[u8] = include_bytes!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../resources/html-templates/calendar-rsvp.html.min.gz"
-));
 
 // inbuxa: passkeys: where a passkey is registered (PK-6)
 static PASSKEY_PAGE: &[u8] = include_bytes!(concat!(
@@ -102,13 +95,13 @@ impl ParseHttp for Server {
             }
         }
 
-        // inbuxa: outside DAV, sign in with a token, never a password (contract C-23)
+        // inbuxa: JMAP and the API take a token, never a password (contract C-23)
         if is_refused_basic(&req, self.core.network.http.basic_auth_everywhere) {
             trc::event!(
                 Auth(trc::AuthEvent::Failed),
                 SpanId = session.session_id,
                 RemoteIp = session.remote_ip,
-                Reason = "Basic authentication is accepted on DAV only; use a bearer token",
+                Reason = "Basic authentication isn't accepted here; use a bearer token",
             );
             return Ok(HttpResponse::unauthorized(AuthChallenge::Bearer));
         }
@@ -276,55 +269,11 @@ impl ParseHttp for Server {
                     _ => (),
                 }
             }
-            "dav" => {
-                let response = match (
-                    path.next().and_then(DavResourceName::parse),
-                    DavMethod::parse(req.method()),
-                ) {
-                    (Some(_), Some(DavMethod::OPTIONS)) => HttpResponse::new(StatusCode::OK)
-                        .with_header(
-                            "DAV",
-                            concat!(
-                                "1, 2, 3, access-control, extended-mkcol, calendar-access, ",
-                                "calendar-auto-schedule, calendar-no-timezone, addressbook"
-                            ),
-                        )
-                        .with_header(
-                            "Allow",
-                            concat!(
-                                "OPTIONS, GET, HEAD, POST, PUT, DELETE, COPY, MOVE, MKCALENDAR, ",
-                                "MKCOL, PROPFIND, PROPPATCH, LOCK, UNLOCK, REPORT, ACL"
-                            ),
-                        ),
-                    (Some(resource), Some(method)) => {
-                        // Authenticate request
-                        let (_in_flight, access_token) =
-                            self.authenticate_headers(&req, &session).await?;
-
-                        self.handle_dav_request(req, access_token, &session, resource, method)
-                            .await
-                    }
-                    (_, None) => HttpResponse::new(StatusCode::METHOD_NOT_ALLOWED),
-                    (None, _) => HttpResponse::new(StatusCode::NOT_FOUND),
-                };
-
-                return Ok(response);
-            }
             ".well-known" => match (path.next().unwrap_or_default(), req.method()) {
                 ("jmap", &Method::GET) => {
                     return Ok(HttpResponse::new(StatusCode::TEMPORARY_REDIRECT)
                         .with_no_cache()
                         .with_location("/jmap/session"));
-                }
-                ("caldav", _) => {
-                    return Ok(HttpResponse::new(StatusCode::TEMPORARY_REDIRECT)
-                        .with_no_cache()
-                        .with_location(DavResourceName::Cal.base_path()));
-                }
-                ("carddav", _) => {
-                    return Ok(HttpResponse::new(StatusCode::TEMPORARY_REDIRECT)
-                        .with_no_cache()
-                        .with_location(DavResourceName::Card.base_path()));
                 }
                 ("oauth-authorization-server", &Method::GET) => {
                     // Limit anonymous requests
@@ -521,19 +470,6 @@ impl ParseHttp for Server {
                         .handle_autoconfig_request(req.uri().query())
                         .await
                         .map(|resource| resource.into_http_response().with_sandbox_policy());
-                }
-            }
-            "calendar" => {
-                // Limit anonymous requests
-                self.is_http_anonymous_request_allowed(session.remote_ip)
-                    .await?;
-
-                if self.core.groupware.itip_http_rsvp_url.is_some()
-                    && req.method() == Method::GET
-                    && path.next().unwrap_or_default() == "rsvp"
-                {
-                    // inbuxa: BT-20, BT-21
-                    return crate::branding::rsvp_page(self, RSVP_PAGE).await;
                 }
             }
             // inbuxa: SCIM 2.0 provisioning (feature 7)
@@ -1012,15 +948,7 @@ mod tests {
     use flate2::read::GzDecoder;
     use std::io::Read;
 
-    const PAGES: [(&str, &[u8], &str); 3] = [
-        (
-            "calendar-rsvp.html",
-            super::RSVP_PAGE,
-            include_str!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../../resources/html-templates/calendar-rsvp.html.min"
-            )),
-        ),
+    const PAGES: [(&str, &[u8], &str); 2] = [
         (
             "passkey.html",
             super::PASSKEY_PAGE,

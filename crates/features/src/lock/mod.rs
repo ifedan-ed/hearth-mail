@@ -166,8 +166,9 @@ impl Access {
                 Acl::RemoveItems,
                 Acl::CreateChild,
             ],
-            // Calendars, address books and files have no "move": organizing
-            // there is adding and changing, never removing
+            // Hearth Mail keeps only mailboxes; this covers grants that lock
+            // records from before name on the removed calendars, address
+            // books and files (no "move" there: adding and changing only)
             (Access::Organize, _) => &[
                 Acl::Read,
                 Acl::ReadItems,
@@ -596,8 +597,6 @@ mod tests {
         assert!(!organize.contains(Acl::Submit));
         let trash = Access::Organize.grants(Collection::Mailbox, true);
         assert!(!trash.contains(Acl::AddItems), "nothing moved into Trash");
-        let calendar = Access::Organize.grants(Collection::Calendar, false);
-        assert!(!calendar.contains(Acl::RemoveItems));
 
         let full = Access::Full.grants(Collection::Mailbox, false);
         assert!(full.contains(Acl::Delete) && full.contains(Acl::RemoveItems));

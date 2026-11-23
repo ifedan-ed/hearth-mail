@@ -226,15 +226,8 @@ impl Server {
                 // refused. What it may see or change there is still each
                 // container's grant.
                 for delegation in delegations.iter() {
-                    let whole: Bitmap<Collection> = Bitmap::from_iter([
-                        Collection::Mailbox,
-                        Collection::Email,
-                        Collection::Calendar,
-                        Collection::CalendarEvent,
-                        Collection::AddressBook,
-                        Collection::ContactCard,
-                        Collection::FileNode,
-                    ]);
+                    let whole: Bitmap<Collection> =
+                        Bitmap::from_iter([Collection::Mailbox, Collection::Email]);
                     match access_to
                         .iter_mut()
                         .find(|a| a.account_id == delegation.account_id)

@@ -218,13 +218,7 @@ impl Server {
             search.index_email || search.index_calendar || search.index_contacts,
         );
         let archive_on = retention.archive_deleted_items_for.is_some();
-        for id in [
-            "x:ArchivedEmail",
-            "x:ArchivedFileNode",
-            "x:ArchivedCalendarEvent",
-            "x:ArchivedContactCard",
-            "x:ArchivedSieveScript",
-        ] {
+        for id in ["x:ArchivedEmail", "x:ArchivedSieveScript"] {
             facts.collected.insert(id.into(), archive_on);
         }
         facts.collected.insert(

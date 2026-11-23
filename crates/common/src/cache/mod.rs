@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-use crate::{DavResources, HttpAuthCache, MailboxCache, MessageStoreCache, UpdateLock};
+use crate::{HttpAuthCache, MailboxCache, MessageStoreCache, UpdateLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::{Semaphore, SemaphorePermit};
 use utils::cache::CacheItemWeight;
@@ -84,11 +84,5 @@ impl CacheItemWeight for MessageStoreCache {
 impl CacheItemWeight for HttpAuthCache {
     fn weight(&self) -> u64 {
         std::mem::size_of::<HttpAuthCache>() as u64
-    }
-}
-
-impl CacheItemWeight for DavResources {
-    fn weight(&self) -> u64 {
-        self.size
     }
 }

@@ -27,20 +27,13 @@ pub(crate) fn matches_id<P: Property, E: Element + JmapObjectId>(
     }
 }
 
-pub mod addressbook;
 pub mod api;
 pub mod blob;
-pub mod calendar;
-pub mod calendar_event;
-pub mod calendar_event_notification;
 pub mod changes;
-pub mod contact;
 pub mod email;
-pub mod file;
 pub mod identity;
 pub mod inbuxa; // inbuxa: the fork's own features
 pub mod mailbox;
-pub mod participant_identity;
 pub mod principal;
 pub mod push;
 pub mod quota;

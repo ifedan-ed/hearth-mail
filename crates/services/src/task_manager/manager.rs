@@ -7,11 +7,9 @@
  */
 
 use crate::task_manager::acme::AcmeTask;
-use crate::task_manager::alarm::SendAlarmTask;
 use crate::task_manager::destroy_account::DestroyAccountTask;
 use crate::task_manager::dkim::DkimManagementTask;
 use crate::task_manager::dns::DnsManagementTask;
-use crate::task_manager::imip::SendImipTask;
 use crate::task_manager::index::SearchIndexTask;
 use crate::task_manager::lock::{TaskLockManager, renew_task_locks};
 use crate::task_manager::maintenance::MaintenanceTask;
@@ -25,9 +23,6 @@ use crate::task_manager::{
 };
 use common::BuildServer;
 use common::config::network::ClusterRoles;
-use common::config::server::{DEFAULT_TLS_TIMEOUT, ServerProtocol};
-use common::network::limiter::ConcurrencyLimiter;
-use common::network::{ServerInstance, TcpAcceptor};
 use common::{Inner, Server};
 use registry::schema::enums::TaskType;
 use registry::schema::prelude::ObjectType;
@@ -47,9 +42,8 @@ use store::{
     write::{BatchBuilder, TaskQueueClass, ValueClass, assert::AssertValue, now},
 };
 use store::{SerializeInfallible, U64_LEN, rand};
-use tokio::sync::{mpsc, watch};
+use tokio::sync::mpsc;
 use trc::TaskManagerEvent;
-use utils::snowflake::SnowflakeIdGenerator;
 
 const TASK_QUEUE_BUFFER: usize = 10;
 const PERPETUAL_RETRY_MIN_DELAY: u64 = 3600;
@@ -87,18 +81,6 @@ pub fn spawn_task_manager(inner: Arc<Inner>) {
         });
     }
 
-    // Create dummy server instance for alarms
-    let server_instance = Arc::new(ServerInstance {
-        id: "_local".to_string(),
-        protocol: ServerProtocol::Smtp,
-        acceptor: TcpAcceptor::Plain,
-        limiter: ConcurrencyLimiter::new(100),
-        tls_timeout: DEFAULT_TLS_TIMEOUT,
-        shutdown_rx: watch::channel(false).1,
-        proxy_networks: vec![],
-        span_id_gen: Arc::new(SnowflakeIdGenerator::new()),
-    });
-
     // Spawn workers for each task type
     let mut txs = Vec::with_capacity(TaskType::COUNT);
     for idx in 0..TaskType::COUNT {
@@ -115,10 +97,7 @@ pub fn spawn_task_manager(inner: Arc<Inner>) {
             | TaskType::TenantMaintenance
             | TaskType::StoreMaintenance => 1,
             TaskType::SpamFilterMaintenance => 2,
-            TaskType::CalendarAlarmEmail
-            | TaskType::CalendarAlarmNotification
-            | TaskType::CalendarItipMessage
-            | TaskType::MergeThreads
+            TaskType::MergeThreads
             | TaskType::DmarcReport
             | TaskType::TlsReport
             | TaskType::RestoreArchivedItem
@@ -130,7 +109,6 @@ pub fn spawn_task_manager(inner: Arc<Inner>) {
         let (tx, mut rx) = mpsc::channel::<TaskJob>(channel_capacity);
         txs.push(tx);
         let inner = inner.clone();
-        let server_instance = server_instance.clone();
 
         if matches!(
             task_type,
@@ -192,7 +170,6 @@ pub fn spawn_task_manager(inner: Arc<Inner>) {
                 }
             });
         } else {
-            let server_instance = server_instance.clone();
             tokio::spawn(async move {
                 while let Some(job) = rx.recv().await {
                     let server = inner.build_server();
@@ -208,9 +185,8 @@ pub fn spawn_task_manager(inner: Arc<Inner>) {
                         let attempted = task.clone();
                         let run = {
                             let server = server.clone();
-                            let server_instance = server_instance.clone();
                             tokio::spawn(async move {
-                                let result = run_task(&server, &task, server_instance).await;
+                                let result = run_task(&server, &task).await;
                                 (task, result)
                             })
                         };
@@ -520,10 +496,7 @@ pub fn task_enabled(roles: &ClusterRoles, task_type: TaskType) -> bool {
         TaskType::StoreMaintenance => roles.store_maintenance,
         TaskType::SpamFilterMaintenance => roles.spam_training,
         TaskType::DmarcReport | TaskType::TlsReport => roles.outbound_mta,
-        TaskType::CalendarAlarmEmail
-        | TaskType::CalendarAlarmNotification
-        | TaskType::CalendarItipMessage
-        | TaskType::MergeThreads
+        TaskType::MergeThreads
         | TaskType::RestoreArchivedItem
         | TaskType::AcmeRenewal
         | TaskType::DkimManagement
@@ -531,30 +504,13 @@ pub fn task_enabled(roles: &ClusterRoles, task_type: TaskType) -> bool {
     }
 }
 
-async fn run_task(
-    server: &Server,
-    task: &Task,
-    server_instance: Arc<ServerInstance>,
-) -> TaskResult {
+async fn run_task(server: &Server, task: &Task) -> TaskResult {
     // inbuxa: AU-1.10: registry writes a task makes are the server's own
-    inbuxa_features::audit::scope::system(
-        task.name(),
-        run_task_unscoped(server, task, server_instance),
-    )
-    .await
+    inbuxa_features::audit::scope::system(task.name(), run_task_unscoped(server, task)).await
 }
 
-async fn run_task_unscoped(
-    server: &Server,
-    task: &Task,
-    server_instance: Arc<ServerInstance>,
-) -> TaskResult {
+async fn run_task_unscoped(server: &Server, task: &Task) -> TaskResult {
     match task {
-        Task::CalendarAlarmEmail(task) => {
-            server.send_email_alarm(task, server_instance.clone()).await
-        }
-        Task::CalendarAlarmNotification(task) => server.send_display_alarm(task).await,
-        Task::CalendarItipMessage(task) => server.send_imip(task, server_instance.clone()).await,
         Task::MergeThreads(task) => server.merge_threads(task).await,
         Task::DmarcReport(task) => {
             server
@@ -676,11 +632,6 @@ async fn update_tasks(
             }
             TaskResult::Ignored => {
                 batch.clear(ValueClass::TaskQueue(TaskQueueClass::Task { id }));
-            }
-            TaskResult::Update(ops) => {
-                for op in ops {
-                    batch.any_op(op);
-                }
             }
             TaskResult::Failure {
                 typ,
@@ -850,13 +801,12 @@ impl TaskResult {
     pub fn is_retry(&self) -> bool {
         matches!(
             self,
-            TaskResult::Update(_)
-                | TaskResult::Failure {
-                    typ: TaskFailureType::Temporary
-                        | TaskFailureType::Retry(_)
-                        | TaskFailureType::Perpetual,
-                    ..
-                }
+            TaskResult::Failure {
+                typ: TaskFailureType::Temporary
+                    | TaskFailureType::Retry(_)
+                    | TaskFailureType::Perpetual,
+                ..
+            }
         )
     }
 }

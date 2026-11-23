@@ -13,8 +13,7 @@ use common::{
     auth::AccessToken,
     ipc::{BroadcastEvent, PushEvent},
 };
-use email::inbuxa_lock::apply_grants;
-use groupware::inbuxa_lock::invalidate;
+use email::inbuxa_lock::{apply_grants, invalidate};
 use inbuxa_features::lock::{self, Access, Delegate, Kind, Lock};
 use jmap_proto::{
     error::set::SetError,

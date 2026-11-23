@@ -12,16 +12,10 @@ use serde::Serialize;
 use std::{cell::Cell, fmt::Debug, str::FromStr};
 use types::{acl::Acl, blob::BlobId, id::Id};
 
-pub mod addressbook;
 pub mod blob;
-pub mod calendar;
-pub mod calendar_event;
-pub mod calendar_event_notification;
-pub mod contact;
 pub mod email;
 pub mod email_submission;
 pub mod fastmail_masked_email; // inbuxa: masked email
-pub mod file_node;
 pub mod identity;
 pub mod inbuxa_account_lock; // inbuxa: account lock with delegation
 pub mod inbuxa_ai_limits; // inbuxa: AI spam classification
@@ -56,7 +50,6 @@ pub mod inbuxa_store_check; // inbuxa: checking the store's blobs
 pub mod inbuxa_store_snapshot; // inbuxa: a snapshot of the store
 pub mod inbuxa_tenant_protocol_policy; // inbuxa: legacy protocols off, per tenant
 pub mod mailbox;
-pub mod participant_identity;
 pub mod principal;
 pub mod push_subscription;
 pub mod quota;

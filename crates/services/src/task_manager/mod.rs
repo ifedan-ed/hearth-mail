@@ -13,17 +13,14 @@ use registry::types::EnumImpl;
 use std::future::Future;
 use std::time::Instant;
 use store::ahash::AHashMap;
-use store::write::Operation;
 use tokio::sync::mpsc;
 use trc::TaskManagerEvent;
 
 pub mod acme;
-pub mod alarm;
 pub mod destroy_account;
 pub mod dkim;
 pub mod dns;
 pub mod domain_check; // inbuxa: re-queue missing DKIM/ACME tasks
-pub mod imip;
 pub mod inbuxa_restore; // inbuxa: undelete
 pub mod index;
 pub mod lock;
@@ -69,7 +66,6 @@ pub(crate) struct TaskJob {
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum TaskResult {
     Success(Vec<Task>),
-    Update([Operation; 2]),
     Failure {
         typ: TaskFailureType,
         message: String,
@@ -97,9 +93,6 @@ impl TaskInfo for Task {
             Task::IndexDocument(_) => "IndexDocument",
             Task::UnindexDocument(_) => "UnindexDocument",
             Task::IndexTrace(_) => "IndexTrace",
-            Task::CalendarAlarmEmail(_) => "CalendarAlarmEmail",
-            Task::CalendarAlarmNotification(_) => "CalendarAlarmNotification",
-            Task::CalendarItipMessage(_) => "CalendarItipMessage",
             Task::MergeThreads(_) => "MergeThreads",
             Task::DmarcReport(_) => "DmarcReport",
             Task::TlsReport(_) => "TlsReport",

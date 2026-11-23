@@ -9,7 +9,6 @@
 use super::metadata::MessageData;
 use crate::cache::{MessageCacheFetch, email::MessageCacheAccess};
 use common::{Server, storage::index::ObjectIndexBuilder};
-use groupware::calendar::storage::ItipAutoExpunge;
 use registry::schema::enums::IndexDocumentType;
 use registry::schema::structs::{Task, TaskIndexDocument, TaskStatus};
 use std::future::Future;
@@ -175,13 +174,6 @@ impl EmailDeletion for Server {
         // Auto-expunge deleted and junk messages
         if let Some(hold_period) = self.core.email.mail_autoexpunge_after {
             self.emails_auto_expunge(account_id, hold_period)
-                .await
-                .caused_by(trc::location!())?;
-        }
-
-        // Auto-expunge iMIP messages
-        if let Some(hold_period) = self.core.groupware.itip_inbox_auto_expunge {
-            self.itip_auto_expunge(account_id, hold_period)
                 .await
                 .caused_by(trc::location!())?;
         }

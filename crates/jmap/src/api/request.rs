@@ -7,32 +7,16 @@
  */
 
 use crate::{
-    addressbook::{get::AddressBookGet, set::AddressBookSet},
     api::auth::JmapAuthorization,
     blob::{copy::BlobCopy, get::BlobOperations, upload::BlobUpload},
-    calendar::{get::CalendarGet, set::CalendarSet},
-    calendar_event::{
-        copy::JmapCalendarEventCopy, get::CalendarEventGet, parse::CalendarEventParse,
-        query::CalendarEventQuery, set::CalendarEventSet,
-    },
-    calendar_event_notification::{
-        get::CalendarEventNotificationGet, query::CalendarEventNotificationQuery,
-        set::CalendarEventNotificationSet,
-    },
     changes::{get::ChangesLookup, query::QueryChanges},
-    contact::{
-        copy::JmapContactCardCopy, get::ContactCardGet, parse::ContactCardParse,
-        query::ContactCardQuery, set::ContactCardSet,
-    },
     email::{
         copy::JmapEmailCopy, get::EmailGet, import::EmailImport, parse::EmailParse,
         query::EmailQuery, set::EmailSet, snippet::EmailSearchSnippet,
     },
-    file::{copy::FileNodeCopy, get::FileNodeGet, query::FileNodeQuery, set::FileNodeSet},
     identity::{get::IdentityGet, set::IdentitySet},
     mailbox::{get::MailboxGet, query::MailboxQuery, set::MailboxSet},
-    participant_identity::{get::ParticipantIdentityGet, set::ParticipantIdentitySet},
-    principal::{availability::PrincipalGetAvailability, get::PrincipalGet, query::PrincipalQuery},
+    principal::{get::PrincipalGet, query::PrincipalQuery},
     push::{get::PushSubscriptionFetch, set::PushSubscriptionSet},
     quota::{get::QuotaGet, query::QuotaQuery},
     registry::{get::RegistryGet, query::RegistryQuery, set::RegistrySet},
@@ -155,14 +139,7 @@ impl RequestHandler for Server {
                 }
                 // inbuxa: AL-7: what a delegate makes in a locked account
                 // may need the lock's grants
-                let makes_containers = is_write
-                    && matches!(
-                        call.name.obj,
-                        MethodObject::Mailbox
-                            | MethodObject::Calendar
-                            | MethodObject::AddressBook
-                            | MethodObject::FileNode
-                    );
+                let makes_containers = is_write && matches!(call.name.obj, MethodObject::Mailbox);
                 let call_name = call.name.as_str().into_owned();
                 let presented = match &call.method {
                     RequestMethod::Changes(changes) => match &changes.since_state {
@@ -359,28 +336,9 @@ impl RequestHandler for Server {
                                     SetResponseMethod::FrontEnds(set_response) => {
                                         set_response.update_created_ids(&mut response);
                                     }
-                                    SetResponseMethod::AddressBook(set_response) => {
-                                        set_response.update_created_ids(&mut response);
-                                    }
-                                    SetResponseMethod::ContactCard(set_response) => {
-                                        set_response.update_created_ids(&mut response);
-                                    }
-                                    SetResponseMethod::FileNode(set_response) => {
-                                        set_response.update_created_ids(&mut response);
-                                    }
                                     SetResponseMethod::ShareNotification(set_response) => {
                                         set_response.update_created_ids(&mut response);
                                     }
-                                    SetResponseMethod::Calendar(set_response) => {
-                                        set_response.update_created_ids(&mut response);
-                                    }
-                                    SetResponseMethod::CalendarEvent(set_response) => {
-                                        set_response.update_created_ids(&mut response);
-                                    }
-                                    SetResponseMethod::ParticipantIdentity(set_response) => {
-                                        set_response.update_created_ids(&mut response);
-                                    }
-                                    SetResponseMethod::CalendarEventNotification(_) => {}
                                     SetResponseMethod::Registry(set_response) => {
                                         set_response.update_created_ids(&mut response);
                                     }
@@ -734,54 +692,6 @@ impl RequestHandler for Server {
 
                     self.blob_get(*req, access_token).await?.into()
                 }
-                GetRequestMethod::AddressBook(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::AddressBook)?;
-
-                    self.address_book_get(*req, access_token).await?.into()
-                }
-                GetRequestMethod::ContactCard(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::ContactCard)?;
-
-                    self.contact_card_get(*req, access_token).await?.into()
-                }
-                GetRequestMethod::FileNode(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::FileNode)?;
-
-                    self.file_node_get(*req, access_token).await?.into()
-                }
-                GetRequestMethod::PrincipalAvailability(req) => self
-                    .principal_get_availability(*req, access_token)
-                    .await?
-                    .into(),
-                GetRequestMethod::Calendar(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::Calendar)?;
-
-                    self.calendar_get(*req, access_token).await?.into()
-                }
-                GetRequestMethod::CalendarEvent(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::CalendarEvent)?;
-
-                    self.calendar_event_get(*req, access_token).await?.into()
-                }
-                GetRequestMethod::CalendarEventNotification(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_is_member(req.account_id)?;
-
-                    self.calendar_event_notification_get(*req, access_token)
-                        .await?
-                        .into()
-                }
-                GetRequestMethod::ParticipantIdentity(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_is_member(req.account_id)?;
-
-                    self.participant_identity_get(*req).await?.into()
-                }
                 GetRequestMethod::ShareNotification(mut req) => {
                     resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
                     access_token.assert_is_member(req.account_id)?;
@@ -836,44 +746,6 @@ impl RequestHandler for Server {
                     access_token.assert_is_member(req.account_id)?;
 
                     self.quota_query(*req, access_token).await?.into()
-                }
-                QueryRequestMethod::AddressBook(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::AddressBook)?;
-
-                    self.address_book_query(*req, access_token).await?.into()
-                }
-                QueryRequestMethod::ContactCard(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::ContactCard)?;
-
-                    self.contact_card_query(*req, access_token).await?.into()
-                }
-                QueryRequestMethod::FileNode(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::FileNode)?;
-
-                    self.file_node_query(*req, access_token).await?.into()
-                }
-                QueryRequestMethod::Calendar(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::Calendar)?;
-
-                    self.calendar_query(*req, access_token).await?.into()
-                }
-                QueryRequestMethod::CalendarEvent(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::CalendarEvent)?;
-
-                    self.calendar_event_query(*req, access_token).await?.into()
-                }
-                QueryRequestMethod::CalendarEventNotification(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_is_member(req.account_id)?;
-
-                    self.calendar_event_notification_query(*req, access_token)
-                        .await?
-                        .into()
                 }
                 QueryRequestMethod::ShareNotification(mut req) => {
                     resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
@@ -1553,63 +1425,11 @@ impl RequestHandler for Server {
                     .await?
                     .into()
                 }
-                SetRequestMethod::AddressBook(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::AddressBook)?;
-
-                    self.address_book_set(*req, access_token, session)
-                        .await?
-                        .into()
-                }
-                SetRequestMethod::ContactCard(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::ContactCard)?;
-
-                    self.contact_card_set(*req, access_token, session)
-                        .await?
-                        .into()
-                }
-                SetRequestMethod::FileNode(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::FileNode)?;
-
-                    self.file_node_set(*req, access_token, session)
-                        .await?
-                        .into()
-                }
                 SetRequestMethod::ShareNotification(mut req) => {
                     resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
                     access_token.assert_is_member(req.account_id)?;
 
                     self.share_notification_set(*req).await?.into()
-                }
-                SetRequestMethod::Calendar(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::Calendar)?;
-
-                    self.calendar_set(*req, access_token, session).await?.into()
-                }
-                SetRequestMethod::CalendarEvent(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::CalendarEvent)?;
-
-                    self.calendar_event_set(*req, access_token, session)
-                        .await?
-                        .into()
-                }
-                SetRequestMethod::CalendarEventNotification(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_is_member(req.account_id)?;
-
-                    self.calendar_event_notification_set(*req, access_token, session)
-                        .await?
-                        .into()
-                }
-                SetRequestMethod::ParticipantIdentity(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_is_member(req.account_id)?;
-
-                    self.participant_identity_set(*req).await?.into()
                 }
                 SetRequestMethod::Registry(mut req) => {
                     resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
@@ -1667,42 +1487,6 @@ impl RequestHandler for Server {
 
                     self.blob_copy(*req, access_token).await?.into()
                 }
-                CopyRequestMethod::ContactCard(mut req) => {
-                    resolve_account_id(&mut req.from_account_id, method_name.obj, access_token)?;
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-
-                    access_token
-                        .assert_has_access(req.account_id, Collection::ContactCard)?
-                        .assert_has_access(req.from_account_id, Collection::ContactCard)?;
-
-                    self.contact_card_copy(*req, access_token, next_call, session)
-                        .await?
-                        .into()
-                }
-                CopyRequestMethod::CalendarEvent(mut req) => {
-                    resolve_account_id(&mut req.from_account_id, method_name.obj, access_token)?;
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-
-                    access_token
-                        .assert_has_access(req.account_id, Collection::CalendarEvent)?
-                        .assert_has_access(req.from_account_id, Collection::CalendarEvent)?;
-
-                    self.calendar_event_copy(*req, access_token, next_call, session)
-                        .await?
-                        .into()
-                }
-                CopyRequestMethod::FileNode(mut req) => {
-                    resolve_account_id(&mut req.from_account_id, method_name.obj, access_token)?;
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-
-                    access_token
-                        .assert_has_access(req.account_id, Collection::FileNode)?
-                        .assert_has_access(req.from_account_id, Collection::FileNode)?;
-
-                    self.file_node_copy(*req, access_token, next_call, session)
-                        .await?
-                        .into()
-                }
             },
             RequestMethod::ImportEmail(mut req) => {
                 resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
@@ -1716,18 +1500,6 @@ impl RequestHandler for Server {
                     access_token.assert_has_access(req.account_id, Collection::Email)?;
 
                     self.email_parse(*req, access_token).await?.into()
-                }
-                ParseRequestMethod::ContactCard(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::ContactCard)?;
-
-                    self.contact_card_parse(*req, access_token).await?.into()
-                }
-                ParseRequestMethod::CalendarEvent(mut req) => {
-                    resolve_account_id(&mut req.account_id, method_name.obj, access_token)?;
-                    access_token.assert_has_access(req.account_id, Collection::CalendarEvent)?;
-
-                    self.calendar_event_parse(*req, access_token).await?.into()
                 }
             },
             RequestMethod::QueryChanges(req) => self.query_changes(req, access_token).await?.into(),

@@ -34,13 +34,6 @@ pub enum MethodObject {
     SieveScript,
     Principal,
     Quota,
-    Calendar,
-    CalendarEvent,
-    CalendarEventNotification,
-    AddressBook,
-    ContactCard,
-    FileNode,
-    ParticipantIdentity,
     ShareNotification,
     Registry(ObjectType),
     // inbuxa: Fastmail's MaskedEmail
@@ -113,12 +106,6 @@ impl MethodObject {
             MethodObject::SieveScript => Capability::Sieve,
             MethodObject::Principal | MethodObject::ShareNotification => Capability::Principals,
             MethodObject::Quota => Capability::Quota,
-            MethodObject::Calendar
-            | MethodObject::CalendarEvent
-            | MethodObject::CalendarEventNotification
-            | MethodObject::ParticipantIdentity => Capability::Calendars,
-            MethodObject::AddressBook | MethodObject::ContactCard => Capability::Contacts,
-            MethodObject::FileNode => Capability::FileNode,
             MethodObject::Registry(_) => Capability::Stalwart,
             MethodObject::MaskedEmail => Capability::FastmailMaskedEmail,
             MethodObject::DeletedAccount => Capability::Inbuxa,
@@ -176,7 +163,6 @@ pub enum MethodFunction {
     Lookup,
     Upload,
     Echo,
-    GetAvailability,
 }
 
 impl Display for MethodName {
@@ -247,9 +233,6 @@ impl MethodName {
             (MethodFunction::Query, MethodObject::Principal) => "Principal/query",
             (MethodFunction::Changes, MethodObject::Principal) => "Principal/changes",
             (MethodFunction::QueryChanges, MethodObject::Principal) => "Principal/queryChanges",
-            (MethodFunction::GetAvailability, MethodObject::Principal) => {
-                "Principal/getAvailability"
-            }
 
             (MethodFunction::Get, MethodObject::Quota) => "Quota/get",
             (MethodFunction::Changes, MethodObject::Quota) => "Quota/changes",
@@ -261,26 +244,6 @@ impl MethodName {
             (MethodFunction::Lookup, MethodObject::Blob) => "Blob/lookup",
             (MethodFunction::Upload, MethodObject::Blob) => "Blob/upload",
 
-            (MethodFunction::Get, MethodObject::AddressBook) => "AddressBook/get",
-            (MethodFunction::Changes, MethodObject::AddressBook) => "AddressBook/changes",
-            (MethodFunction::Set, MethodObject::AddressBook) => "AddressBook/set",
-            (MethodFunction::Query, MethodObject::AddressBook) => "AddressBook/query",
-
-            (MethodFunction::Get, MethodObject::ContactCard) => "ContactCard/get",
-            (MethodFunction::Changes, MethodObject::ContactCard) => "ContactCard/changes",
-            (MethodFunction::Query, MethodObject::ContactCard) => "ContactCard/query",
-            (MethodFunction::QueryChanges, MethodObject::ContactCard) => "ContactCard/queryChanges",
-            (MethodFunction::Set, MethodObject::ContactCard) => "ContactCard/set",
-            (MethodFunction::Copy, MethodObject::ContactCard) => "ContactCard/copy",
-            (MethodFunction::Parse, MethodObject::ContactCard) => "ContactCard/parse",
-
-            (MethodFunction::Get, MethodObject::FileNode) => "FileNode/get",
-            (MethodFunction::Changes, MethodObject::FileNode) => "FileNode/changes",
-            (MethodFunction::Query, MethodObject::FileNode) => "FileNode/query",
-            (MethodFunction::QueryChanges, MethodObject::FileNode) => "FileNode/queryChanges",
-            (MethodFunction::Set, MethodObject::FileNode) => "FileNode/set",
-            (MethodFunction::Copy, MethodObject::FileNode) => "FileNode/copy",
-
             (MethodFunction::Get, MethodObject::ShareNotification) => "ShareNotification/get",
             (MethodFunction::Changes, MethodObject::ShareNotification) => {
                 "ShareNotification/changes"
@@ -290,43 +253,6 @@ impl MethodName {
                 "ShareNotification/queryChanges"
             }
             (MethodFunction::Set, MethodObject::ShareNotification) => "ShareNotification/set",
-
-            (MethodFunction::Get, MethodObject::Calendar) => "Calendar/get",
-            (MethodFunction::Changes, MethodObject::Calendar) => "Calendar/changes",
-            (MethodFunction::Set, MethodObject::Calendar) => "Calendar/set",
-            (MethodFunction::Query, MethodObject::Calendar) => "Calendar/query",
-
-            (MethodFunction::Get, MethodObject::CalendarEvent) => "CalendarEvent/get",
-            (MethodFunction::Changes, MethodObject::CalendarEvent) => "CalendarEvent/changes",
-            (MethodFunction::Query, MethodObject::CalendarEvent) => "CalendarEvent/query",
-            (MethodFunction::QueryChanges, MethodObject::CalendarEvent) => {
-                "CalendarEvent/queryChanges"
-            }
-            (MethodFunction::Set, MethodObject::CalendarEvent) => "CalendarEvent/set",
-            (MethodFunction::Copy, MethodObject::CalendarEvent) => "CalendarEvent/copy",
-            (MethodFunction::Parse, MethodObject::CalendarEvent) => "CalendarEvent/parse",
-
-            (MethodFunction::Get, MethodObject::CalendarEventNotification) => {
-                "CalendarEventNotification/get"
-            }
-            (MethodFunction::Changes, MethodObject::CalendarEventNotification) => {
-                "CalendarEventNotification/changes"
-            }
-            (MethodFunction::Query, MethodObject::CalendarEventNotification) => {
-                "CalendarEventNotification/query"
-            }
-            (MethodFunction::QueryChanges, MethodObject::CalendarEventNotification) => {
-                "CalendarEventNotification/queryChanges"
-            }
-            (MethodFunction::Set, MethodObject::CalendarEventNotification) => {
-                "CalendarEventNotification/set"
-            }
-
-            (MethodFunction::Get, MethodObject::ParticipantIdentity) => "ParticipantIdentity/get",
-            (MethodFunction::Changes, MethodObject::ParticipantIdentity) => {
-                "ParticipantIdentity/changes"
-            }
-            (MethodFunction::Set, MethodObject::ParticipantIdentity) => "ParticipantIdentity/set",
 
             (MethodFunction::Echo, MethodObject::Core) => "Core/echo",
             (MethodFunction::Get, MethodObject::MaskedEmail) => "MaskedEmail/get",
@@ -481,7 +407,6 @@ impl MethodName {
             "Principal/query" => (MethodObject::Principal, MethodFunction::Query),
             "Principal/changes" => (MethodObject::Principal, MethodFunction::Changes),
             "Principal/queryChanges" => (MethodObject::Principal, MethodFunction::QueryChanges),
-            "Principal/getAvailability" => (MethodObject::Principal, MethodFunction::GetAvailability),
 
             "Quota/get" => (MethodObject::Quota, MethodFunction::Get),
             "Quota/changes" => (MethodObject::Quota, MethodFunction::Changes),
@@ -493,25 +418,8 @@ impl MethodName {
             "Blob/lookup" => (MethodObject::Blob, MethodFunction::Lookup),
             "Blob/upload" => (MethodObject::Blob, MethodFunction::Upload),
 
-            "AddressBook/get" => (MethodObject::AddressBook, MethodFunction::Get),
-            "AddressBook/changes" => (MethodObject::AddressBook, MethodFunction::Changes),
-            "AddressBook/set" => (MethodObject::AddressBook, MethodFunction::Set),
-            "AddressBook/query" => (MethodObject::AddressBook, MethodFunction::Query),
 
-            "ContactCard/get" => (MethodObject::ContactCard, MethodFunction::Get),
-            "ContactCard/changes" => (MethodObject::ContactCard, MethodFunction::Changes),
-            "ContactCard/query" => (MethodObject::ContactCard, MethodFunction::Query),
-            "ContactCard/queryChanges" => (MethodObject::ContactCard, MethodFunction::QueryChanges),
-            "ContactCard/set" => (MethodObject::ContactCard, MethodFunction::Set),
-            "ContactCard/copy" => (MethodObject::ContactCard, MethodFunction::Copy),
-            "ContactCard/parse" => (MethodObject::ContactCard, MethodFunction::Parse),
 
-            "FileNode/get" => (MethodObject::FileNode, MethodFunction::Get),
-            "FileNode/changes" => (MethodObject::FileNode, MethodFunction::Changes),
-            "FileNode/query" => (MethodObject::FileNode, MethodFunction::Query),
-            "FileNode/queryChanges" => (MethodObject::FileNode, MethodFunction::QueryChanges),
-            "FileNode/set" => (MethodObject::FileNode, MethodFunction::Set),
-            "FileNode/copy" => (MethodObject::FileNode, MethodFunction::Copy),
 
             "ShareNotification/get" => (MethodObject::ShareNotification, MethodFunction::Get),
             "ShareNotification/changes" => (MethodObject::ShareNotification, MethodFunction::Changes),
@@ -519,28 +427,9 @@ impl MethodName {
             "ShareNotification/query" => (MethodObject::ShareNotification, MethodFunction::Query),
             "ShareNotification/queryChanges" => (MethodObject::ShareNotification, MethodFunction::QueryChanges),
 
-            "Calendar/get" => (MethodObject::Calendar, MethodFunction::Get),
-            "Calendar/changes" => (MethodObject::Calendar, MethodFunction::Changes),
-            "Calendar/set" => (MethodObject::Calendar, MethodFunction::Set),
-            "Calendar/query" => (MethodObject::Calendar, MethodFunction::Query),
 
-            "CalendarEvent/get" => (MethodObject::CalendarEvent, MethodFunction::Get),
-            "CalendarEvent/changes" => (MethodObject::CalendarEvent, MethodFunction::Changes),
-            "CalendarEvent/query" => (MethodObject::CalendarEvent, MethodFunction::Query),
-            "CalendarEvent/queryChanges" => (MethodObject::CalendarEvent, MethodFunction::QueryChanges),
-            "CalendarEvent/set" => (MethodObject::CalendarEvent, MethodFunction::Set),
-            "CalendarEvent/copy" => (MethodObject::CalendarEvent, MethodFunction::Copy),
-            "CalendarEvent/parse" => (MethodObject::CalendarEvent, MethodFunction::Parse),
 
-            "CalendarEventNotification/get" => (MethodObject::CalendarEventNotification, MethodFunction::Get),
-            "CalendarEventNotification/changes" => (MethodObject::CalendarEventNotification, MethodFunction::Changes),
-            "CalendarEventNotification/set" => (MethodObject::CalendarEventNotification, MethodFunction::Set),
-            "CalendarEventNotification/query" => (MethodObject::CalendarEventNotification, MethodFunction::Query),
-            "CalendarEventNotification/queryChanges" => (MethodObject::CalendarEventNotification, MethodFunction::QueryChanges),
 
-            "ParticipantIdentity/get" => (MethodObject::ParticipantIdentity, MethodFunction::Get),
-            "ParticipantIdentity/changes" => (MethodObject::ParticipantIdentity, MethodFunction::Changes),
-            "ParticipantIdentity/set" => (MethodObject::ParticipantIdentity, MethodFunction::Set),
 
             "Core/echo" => (MethodObject::Core, MethodFunction::Echo),
 
@@ -656,13 +545,6 @@ impl Display for MethodObject {
             MethodObject::Thread => "Thread",
             MethodObject::Email => "Email",
             MethodObject::Quota => "Quota",
-            MethodObject::AddressBook => "AddressBook",
-            MethodObject::ContactCard => "ContactCard",
-            MethodObject::FileNode => "FileNode",
-            MethodObject::ParticipantIdentity => "ParticipantIdentity",
-            MethodObject::Calendar => "Calendar",
-            MethodObject::CalendarEvent => "CalendarEvent",
-            MethodObject::CalendarEventNotification => "CalendarEventNotification",
             MethodObject::ShareNotification => "ShareNotification",
             MethodObject::MaskedEmail => "MaskedEmail",
             MethodObject::DeletedAccount => "inbuxa:DeletedAccount",
@@ -725,7 +607,6 @@ impl MethodFunction {
             MethodFunction::Lookup => "lookup",
             MethodFunction::Upload => "upload",
             MethodFunction::Echo => "echo",
-            MethodFunction::GetAvailability => "getAvailability",
         }
     }
 }

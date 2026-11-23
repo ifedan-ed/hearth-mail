@@ -6,7 +6,7 @@
  * Modified by Coffey Labs in 2026 for INBUXA.
  */
 
-use crate::utils::{imap::ImapConnection, server::TestServer, webdav::DummyWebDavClient};
+use crate::utils::{imap::ImapConnection, server::TestServer};
 use ahash::AHashMap;
 use jmap_client::client::{Client, Credentials};
 use registry::{
@@ -286,15 +286,6 @@ impl Account {
         )
         .await
         .updated_id(account_id);
-    }
-
-    pub fn webdav_client(&self) -> DummyWebDavClient {
-        DummyWebDavClient::new(
-            self.id.document_id(),
-            self.name(),
-            self.secret(),
-            self.emails()[0],
-        )
     }
 
     pub async fn imap_client(&self) -> ImapConnection {

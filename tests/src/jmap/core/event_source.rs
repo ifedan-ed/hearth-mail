@@ -37,6 +37,8 @@ pub async fn test(test: &TestServer) {
             if let Err(_err) = event_tx
                 .send(match change.unwrap() {
                     PushNotification::StateChange(changes) => changes,
+                    // The client library still knows calendar alerts; this
+                    // server never sends them.
                     PushNotification::CalendarAlert(_) => unreachable!(),
                 })
                 .await

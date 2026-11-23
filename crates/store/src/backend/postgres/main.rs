@@ -13,10 +13,7 @@ use crate::{
         search::{PG_FALLBACK_LANG, PG_LANGS, PG_UNSTEMMED_LANG},
         tls::MakeRustlsConnect,
     },
-    search::{
-        CalendarSearchField, ContactSearchField, EmailSearchField, SearchField, SearchableField,
-        TracingSearchField,
-    },
+    search::{EmailSearchField, SearchField, SearchableField, TracingSearchField},
     *,
 };
 use ::registry::schema::{enums::PostgreSqlRecyclingMethod, structs};
@@ -258,8 +255,6 @@ impl PostgresStore {
         let limit = self.timeouts.maintenance;
         let result = tokio::time::timeout(limit, async {
             create_search_tables::<EmailSearchField>(&conn).await?;
-            create_search_tables::<CalendarSearchField>(&conn).await?;
-            create_search_tables::<ContactSearchField>(&conn).await?;
             //create_search_tables::<FileSearchField>(&conn).await?;
             create_search_tables::<TracingSearchField>(&conn).await?;
 

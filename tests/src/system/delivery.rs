@@ -15,7 +15,6 @@ use email::{
     mailbox::{INBOX_ID, JUNK_ID, SENT_ID},
     message::metadata::MessageMetadata,
 };
-use groupware::DavResourceName;
 use jmap::blob::download::BlobDownload;
 use jmap_proto::error::set::SetErrorType;
 use registry::{
@@ -277,67 +276,6 @@ pub async fn test(test: &mut TestServer) {
     .await;
     assert_eq!(john.spam_training_samples().await, vec![]);
 
-    // CardDAV spam override, using masked email
-    let dav_client = john.webdav_client();
-    dav_client
-        .request(
-            "PUT",
-            &format!(
-                "{}/jdoe%40example.org/default/bill.vcf",
-                DavResourceName::Card.base_path()
-            ),
-            r#"BEGIN:VCARD
-VERSION:4.0
-FN:Bill Foobar
-EMAIL;TYPE=WORK:dmarc-bill@example.org
-UID:urn:uuid:e1ee798b-3d4c-41b0-b217-b9c918e4686f
-END:VCARD
-"#,
-        )
-        .await
-        .with_status(hyper::StatusCode::CREATED);
-    lmtp.ingest(
-        "dmarc-bill@example.org",
-        &[masked_random_email.as_str()],
-        concat!(
-            "From: dmarc-bill@example.org\r\n",
-            "To: john.doe@example.org\r\n",
-            "Subject: XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X\r\n",
-            "\r\n",
-            "--- Forwarded Message ---\r\n\r\n ",
-            "I'm going to need those TPS reports ASAP. ",
-            "So, if you could do that, that'd be great."
-        ),
-    )
-    .await;
-    let john_cache = test
-        .server
-        .get_cached_messages(john.id().document_id())
-        .await
-        .unwrap();
-    let inbox_ids = john_cache
-        .in_mailbox(INBOX_ID)
-        .map(|e| e.document_id)
-        .collect::<RoaringBitmap>();
-    let junk_ids = john_cache
-        .in_mailbox(JUNK_ID)
-        .map(|e| e.document_id)
-        .collect::<RoaringBitmap>();
-    assert_eq!(john_cache.emails.items.len(), 3);
-    assert_eq!(inbox_ids.len(), 2);
-    assert_eq!(junk_ids.len(), 1);
-    dav_client.delete_default_containers().await;
-    assert_message_headers_contains(
-        &test.server,
-        john.id().document_id(),
-        inbox_ids.max().unwrap(),
-        "X-Spam-Status: No, reason=card-exists",
-    )
-    .await;
-    let samples = john.spam_training_samples().await;
-    assert_eq!(samples.iter().filter(|x| !x.1.is_spam).count(), 1);
-    assert_eq!(samples.iter().filter(|x| x.1.is_spam).count(), 0);
-
     // Test trusted reply override
     john.jmap_client()
         .await
@@ -367,7 +305,7 @@ END:VCARD
             .emails
             .items
             .len(),
-        4
+        3
     );
     lmtp.ingest(
         "dmarc-bill@example.org",
@@ -398,8 +336,8 @@ END:VCARD
         .in_mailbox(JUNK_ID)
         .map(|e| e.document_id)
         .collect::<RoaringBitmap>();
-    assert_eq!(john_cache.emails.items.len(), 5);
-    assert_eq!(inbox_ids.len(), 3);
+    assert_eq!(john_cache.emails.items.len(), 4);
+    assert_eq!(inbox_ids.len(), 2);
     assert_eq!(junk_ids.len(), 1);
     assert_message_headers_contains(
         &test.server,
@@ -409,7 +347,7 @@ END:VCARD
     )
     .await;
     let samples = john.spam_training_samples().await;
-    assert_eq!(samples.iter().filter(|x| !x.1.is_spam).count(), 2);
+    assert_eq!(samples.iter().filter(|x| !x.1.is_spam).count(), 1);
     assert_eq!(samples.iter().filter(|x| x.1.is_spam).count(), 0);
 
     // EXPN and VRFY

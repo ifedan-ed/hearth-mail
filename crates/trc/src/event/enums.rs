@@ -30,7 +30,6 @@ pub enum EventType {
     Ai(AiEvent),
     Arc(ArcEvent),
     Auth(AuthEvent),
-    Calendar(CalendarEvent),
     Cluster(ClusterEvent),
     Dane(DaneEvent),
     Delivery(DeliveryEvent),
@@ -72,7 +71,6 @@ pub enum EventType {
     Telemetry(TelemetryEvent),
     Tls(TlsEvent),
     TlsRpt(TlsRptEvent),
-    WebDav(WebDavEvent),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -135,19 +133,6 @@ pub enum AuthEvent {
     /// inbuxa: passkeys spec, PK-18: a passkey's counter didn't go up, so it
     /// may have been copied
     PasskeyCounter = 664,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u16)]
-pub enum CalendarEvent {
-    RuleExpansionError = 576,
-    AlarmSent = 579,
-    AlarmSkipped = 580,
-    AlarmRecipientOverride = 581,
-    AlarmFailed = 582,
-    ItipMessageSent = 583,
-    ItipMessageReceived = 584,
-    ItipMessageError = 585,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -962,29 +947,6 @@ pub enum TlsRptEvent {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u16)]
-pub enum WebDavEvent {
-    Propfind = 147,
-    Proppatch = 148,
-    Get = 335,
-    Head = 574,
-    Report = 336,
-    Mkcol = 376,
-    Mkcalendar = 575,
-    Delete = 458,
-    Put = 459,
-    Post = 565,
-    Patch = 566,
-    Copy = 567,
-    Move = 568,
-    Lock = 569,
-    Unlock = 570,
-    Acl = 571,
-    Options = 573,
-    Error = 572,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u16)]
 pub enum MetricType {
     AcmeAuthError = 27,
     AcmeAuthTooManyAttempts = 28,
@@ -1003,11 +965,6 @@ pub enum MetricType {
     AuthFailed = 45,
     AuthTooManyAttempts = 46,
     AuthError = 47,
-    CalendarAlarmSent = 48,
-    CalendarAlarmFailed = 49,
-    CalendarItipMessageSent = 50,
-    CalendarItipMessageReceived = 51,
-    CalendarItipMessageError = 52,
     ClusterSubscriberError = 53,
     ClusterSubscriberDisconnected = 54,
     ClusterPublisherError = 55,

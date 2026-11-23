@@ -4,20 +4,21 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-//! inbuxa: a locked account's grants, whole (audit-hold-lock spec, AL-7,
-//! AL-10): its mailboxes here, and its calendars, address books and files
-//! through `groupware::inbuxa_lock`.
+//! inbuxa: a locked account's grants (audit-hold-lock spec, AL-7, AL-10):
+//! its mailboxes, the only containers Hearth Mail keeps.
 //!
 //! A delegate's access is real ACL grants on the locked account's
-//! containers, the sharing IMAP, DAV and JMAP already honor, so a delegate
+//! containers, the sharing IMAP and JMAP already honor, so a delegate
 //! sees the account as a shared one everywhere. The lock notes what each
 //! delegate had on a container before, so ending a delegation or the lock
 //! puts it back. Idempotent: run again, it grants on containers made since
 //! and changes nothing else.
 
 use crate::{cache::MessageCacheFetch, mailbox::Mailbox};
-use common::{Server, storage::index::ObjectIndexBuilder};
-use groupware::inbuxa_lock::{apply_dav_grants, invalidate, same_replaced};
+use common::{
+    Server, cache::invalidate::CacheInvalidationBuilder, ipc::CacheInvalidation,
+    storage::index::ObjectIndexBuilder,
+};
 use inbuxa_features::lock::{self, Lock, Replaced};
 use store::{
     ValueKey,
@@ -89,8 +90,6 @@ pub async fn apply_grants(
             .caused_by(trc::location!())?;
     }
 
-    apply_dav_grants(server, account_id, old, new, now, &mut replaced, &mut batch).await?;
-
     if !batch.is_empty() {
         server
             .commit_batch(batch)
@@ -125,4 +124,30 @@ pub async fn reconcile_all(server: &Server) -> trc::Result<()> {
         reconcile(server, current.account_id).await?;
     }
     Ok(())
+}
+
+/// Drops the cached access tokens of the locked account and of every
+/// delegate, old and new, so the changed grants apply at once.
+pub async fn invalidate(
+    server: &Server,
+    account_id: u32,
+    old: Option<&Lock>,
+    new: Option<&Lock>,
+) -> trc::Result<()> {
+    let mut builder = CacheInvalidationBuilder::default();
+    builder.invalidate(CacheInvalidation::AccessToken(account_id));
+    for delegate in old.into_iter().chain(new).flat_map(|l| &l.delegates) {
+        builder.invalidate(CacheInvalidation::AccessToken(delegate.account_id));
+    }
+    server.invalidate_caches(builder).await
+}
+
+/// Whether two lists of remembered grants are the same, in any order.
+fn same_replaced(a: &[Replaced], b: &[Replaced]) -> bool {
+    let key = |r: &Replaced| (r.collection, r.document_id, r.delegate, r.rights);
+    let mut a = a.iter().map(key).collect::<Vec<_>>();
+    let mut b = b.iter().map(key).collect::<Vec<_>>();
+    a.sort();
+    b.sort();
+    a == b
 }

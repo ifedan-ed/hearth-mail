@@ -285,7 +285,7 @@ async fn pagination_test(test: &mut TestServer) {
 impl Account {
     async fn schedule_test_task(&self, test_type: u64, schedule_in: u64) -> Id {
         self.registry_create_object(Task::StoreMaintenance(TaskStoreMaintenance {
-            maintenance_type: TaskStoreMaintenanceType::RemoveLockDav,
+            maintenance_type: TaskStoreMaintenanceType::RemoveGreylist,
             shard_index: Some(test_type),
             status: TaskStatus::at((now() + schedule_in) as i64),
         }))

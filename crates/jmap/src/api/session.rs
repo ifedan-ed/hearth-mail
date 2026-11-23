@@ -54,7 +54,7 @@ impl SessionHandler for Server {
                 capability,
                 account_capabilities
                     .get(&capability)
-                    .map(|v| v.to_account_capabilities(account_id.into(), true))
+                    .map(|v| v.to_account_capabilities(account_id.into()))
                     .unwrap_or_else(|| Capabilities::Empty(EmptyCapabilities::default())),
             );
         }
@@ -131,7 +131,6 @@ impl SessionHandler for Server {
 
         // Add secondary accounts
         for &account_id in access_token.secondary_ids() {
-            let is_owner = access_token.reads_as_owner(account_id);
             let Some(account) = self
                 .try_account(account_id)
                 .await
@@ -162,7 +161,7 @@ impl SessionHandler for Server {
                     capability,
                     account_capabilities
                         .get(&capability)
-                        .map(|v| v.to_account_capabilities(account_id.into(), is_owner))
+                        .map(|v| v.to_account_capabilities(account_id.into()))
                         .unwrap_or_else(|| Capabilities::Empty(EmptyCapabilities::default())),
                 );
             }
@@ -205,18 +204,12 @@ impl AccountCapabilities for AccessToken {
                     }
                     Capability::Submission => Permission::JmapEmailSubmissionCreate,
                     Capability::VacationResponse => Permission::JmapVacationResponseGet,
-                    Capability::Contacts => Permission::JmapContactCardGet,
-                    Capability::ContactsParse => Permission::JmapContactCardParse,
-                    Capability::Calendars => Permission::JmapCalendarEventGet,
-                    Capability::CalendarsParse => Permission::JmapCalendarEventParse,
                     Capability::Sieve => Permission::JmapSieveScriptGet,
                     Capability::Blob => Permission::JmapBlobGet,
                     Capability::Quota => Permission::JmapQuotaGet,
-                    Capability::FileNode => Permission::JmapFileNodeGet,
-                    Capability::WebSocket
-                    | Capability::Principals
-                    | Capability::PrincipalsAvailability
-                    | Capability::Stalwart => return true,
+                    Capability::WebSocket | Capability::Principals | Capability::Stalwart => {
+                        return true;
+                    }
                     Capability::Core
                     | Capability::PrincipalsOwner
                     | Capability::WebPushVapid

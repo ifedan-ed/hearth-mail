@@ -28,7 +28,7 @@ impl Server {
     /// anyway. The `jmapPrincipal*` and `davPrincipal*` permissions don't count
     /// here: every default user role holds them.
     pub fn can_read_directory(&self, access_token: &AccessToken) -> bool {
-        self.core.groupware.allow_directory_query
+        self.core.sharing.allow_directory_query
             || access_token.has_permission(Permission::SysAccountQuery)
     }
 
@@ -423,9 +423,7 @@ impl Default for DefaultPermissions {
                     if name.starts_with("jmap")
                         || name.starts_with("imap")
                         || name.starts_with("pop3")
-                        || name.starts_with("calendar")
                         || name.starts_with("email")
-                        || name.starts_with("dav")
                         || name.starts_with("sieve")
                     {
                         default.user.push(permission);

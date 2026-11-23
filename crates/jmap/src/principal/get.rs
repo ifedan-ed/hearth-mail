@@ -106,22 +106,15 @@ impl PrincipalGet for Server {
                     PrincipalProperty::Accounts => Value::Object(Map::from(vec![(
                         Key::Property(PrincipalProperty::IdValue(id)),
                         Value::Object(Map::from_iter(
-                            [
-                                Capability::Mail,
-                                Capability::Contacts,
-                                Capability::Calendars,
-                                Capability::FileNode,
-                                Capability::Principals,
-                            ]
-                            .iter()
-                            .map(|cap| {
-                                (
-                                    Key::Property(PrincipalProperty::Capability(*cap)),
-                                    Value::Object(Map::new()),
-                                )
-                            })
-                            .chain([
-                                (
+                            [Capability::Mail, Capability::Principals]
+                                .iter()
+                                .map(|cap| {
+                                    (
+                                        Key::Property(PrincipalProperty::Capability(*cap)),
+                                        Value::Object(Map::new()),
+                                    )
+                                })
+                                .chain([(
                                     Key::Property(PrincipalProperty::Capability(
                                         Capability::PrincipalsOwner,
                                     )),
@@ -135,44 +128,18 @@ impl PrincipalGet for Server {
                                             Value::Element(PrincipalValue::Id(id)),
                                         ),
                                     ])),
-                                ),
-                                (
-                                    Key::Property(PrincipalProperty::Capability(
-                                        Capability::Calendars,
-                                    )),
-                                    Value::Object(Map::from(vec![
-                                        (
-                                            Key::Borrowed("accountId"),
-                                            Value::Element(PrincipalValue::Id(id)),
-                                        ),
-                                        (Key::Borrowed("mayGetAvailability"), Value::Bool(true)),
-                                        (Key::Borrowed("mayShareWith"), Value::Bool(true)),
-                                        (
-                                            Key::Borrowed("calendarAddress"),
-                                            Value::Str(
-                                                format!("mailto:{}", principal.name()).into(),
-                                            ),
-                                        ),
-                                    ])),
-                                ),
-                            ]),
+                                )]),
                         )),
                     )])),
                     PrincipalProperty::Capabilities => Value::Object(Map::from_iter(
-                        [
-                            Capability::Mail,
-                            Capability::Contacts,
-                            Capability::Calendars,
-                            Capability::FileNode,
-                            Capability::Principals,
-                        ]
-                        .iter()
-                        .map(|cap| {
-                            (
-                                Key::Property(PrincipalProperty::Capability(*cap)),
-                                Value::Object(Map::new()),
-                            )
-                        }),
+                        [Capability::Mail, Capability::Principals]
+                            .iter()
+                            .map(|cap| {
+                                (
+                                    Key::Property(PrincipalProperty::Capability(*cap)),
+                                    Value::Object(Map::new()),
+                                )
+                            }),
                     )),
                     _ => Value::Null,
                 };

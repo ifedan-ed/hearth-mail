@@ -13,7 +13,6 @@ use utils::map::bitmap::Bitmap;
 
 pub mod acl;
 pub mod notification;
-pub mod resources;
 
 pub trait EffectiveAcl {
     fn effective_acl(&self, access_token: &AccessToken) -> Bitmap<Acl>;

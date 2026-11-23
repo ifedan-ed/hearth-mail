@@ -8,8 +8,7 @@
 
 use super::server::tls::build_self_signed_cert;
 use crate::{
-    Caches, Data, DavResource, DavResources, MailboxCache, MessageStoreCache, MessageUidCache,
-    TlsConnectors,
+    Caches, Data, MailboxCache, MessageStoreCache, MessageUidCache, TlsConnectors,
     auth::{AccessTokenInner, AccountCache, DomainCache, MailingListCache, RoleCache, TenantCache},
     config::{
         mailstore::spamfilter::SpamClassifier,
@@ -122,26 +121,6 @@ impl Caches {
                     + std::mem::size_of::<Arc<MessageStoreCache>>()
                     + (1024 * std::mem::size_of::<MessageUidCache>())
                     + (15 * (std::mem::size_of::<MailboxCache>() + 60))) as u64,
-            ),
-            files: Cache::new_single_shard(
-                cache.files,
-                (std::mem::size_of::<DavResources>() + (500 * std::mem::size_of::<DavResource>()))
-                    as u64,
-            ),
-            events: Cache::new_single_shard(
-                cache.events,
-                (std::mem::size_of::<DavResources>() + (500 * std::mem::size_of::<DavResource>()))
-                    as u64,
-            ),
-            contacts: Cache::new_single_shard(
-                cache.contacts,
-                (std::mem::size_of::<DavResources>() + (500 * std::mem::size_of::<DavResource>()))
-                    as u64,
-            ),
-            scheduling: Cache::new_single_shard(
-                cache.scheduling,
-                (std::mem::size_of::<DavResources>() + (500 * std::mem::size_of::<DavResource>()))
-                    as u64,
             ),
             emails: Cache::new(cache.email_addresses, 255u64),
             emails_negative: CacheWithTtl::new(

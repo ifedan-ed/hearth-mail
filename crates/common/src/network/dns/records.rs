@@ -234,18 +234,9 @@ impl Server {
                         let target =
                             format!("{}.", service.hostname.as_deref().unwrap_or(default_host));
                         let services = match protocol {
-                            ServiceProtocol::Jmap
-                            | ServiceProtocol::Caldav
-                            | ServiceProtocol::Carddav => {
-                                let name = match protocol {
-                                    ServiceProtocol::Jmap => "jmap",
-                                    ServiceProtocol::Caldav => "caldavs",
-                                    ServiceProtocol::Carddav => "carddavs",
-                                    _ => unreachable!(),
-                                };
-
+                            ServiceProtocol::Jmap => {
                                 records.push(NamedDnsRecord {
-                                    name: format!("_{name}._tcp.{domain_name}."),
+                                    name: format!("_jmap._tcp.{domain_name}."),
                                     record: DnsRecord::SRV(SRVRecord {
                                         target: target.clone(),
                                         priority: 0,
@@ -255,7 +246,7 @@ impl Server {
                                 });
                                 continue;
                             }
-                            ServiceProtocol::Webdav | ServiceProtocol::Managesieve => continue,
+                            ServiceProtocol::Managesieve => continue,
                             ServiceProtocol::Imap => [("imap", 143), ("imaps", 993)],
                             ServiceProtocol::Pop3 => [("pop3", 110), ("pop3s", 995)],
                             ServiceProtocol::Smtp => [("submission", 587), ("submissions", 465)],
@@ -370,10 +361,7 @@ impl Server {
                                 ServiceProtocol::Imap => 993,
                                 ServiceProtocol::Pop3 => 995,
                                 ServiceProtocol::Smtp => 465,
-                                ServiceProtocol::Jmap
-                                | ServiceProtocol::Caldav
-                                | ServiceProtocol::Carddav
-                                | ServiceProtocol::Webdav => 443,
+                                ServiceProtocol::Jmap => 443,
                                 ServiceProtocol::Managesieve => continue,
                             };
                             hostnames
@@ -537,6 +525,8 @@ fn persist_validation_record(
     }
 }
 
+// The test build names pebble whatever the URL, so `url` goes unused there.
+#[cfg_attr(feature = "test_mode", allow(unused_variables))]
 fn provider_domain(url: &Url) -> Option<&str> {
     #[cfg(feature = "test_mode")]
     {

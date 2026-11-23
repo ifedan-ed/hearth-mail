@@ -19,7 +19,6 @@ impl EnumImpl for ObjectType {
             b"AccountSettings" => ObjectType::AccountSettings,
             b"AcmeProvider" => ObjectType::AcmeProvider,
             b"Action" => ObjectType::Action,
-            b"AddressBook" => ObjectType::AddressBook,
             b"AiModel" => ObjectType::AiModel,
             b"Alert" => ObjectType::Alert,
             b"AllowedIp" => ObjectType::AllowedIp,
@@ -34,9 +33,6 @@ impl EnumImpl for ObjectType {
             b"BlockedIp" => ObjectType::BlockedIp,
             b"Bootstrap" => ObjectType::Bootstrap,
             b"Cache" => ObjectType::Cache,
-            b"Calendar" => ObjectType::Calendar,
-            b"CalendarAlarm" => ObjectType::CalendarAlarm,
-            b"CalendarScheduling" => ObjectType::CalendarScheduling,
             b"Certificate" => ObjectType::Certificate,
             b"ClusterNode" => ObjectType::ClusterNode,
             b"ClusterRole" => ObjectType::ClusterRole,
@@ -56,7 +52,6 @@ impl EnumImpl for ObjectType {
             b"Email" => ObjectType::Email,
             b"Enterprise" => ObjectType::Enterprise,
             b"EventTracingLevel" => ObjectType::EventTracingLevel,
-            b"FileStorage" => ObjectType::FileStorage,
             b"Http" => ObjectType::Http,
             b"HttpForm" => ObjectType::HttpForm,
             b"HttpLookup" => ObjectType::HttpLookup,
@@ -129,7 +124,6 @@ impl EnumImpl for ObjectType {
             b"Trace" => ObjectType::Trace,
             b"Tracer" => ObjectType::Tracer,
             b"TracingStore" => ObjectType::TracingStore,
-            b"WebDav" => ObjectType::WebDav,
             b"WebHook" => ObjectType::WebHook,
         }
     }
@@ -141,7 +135,6 @@ impl EnumImpl for ObjectType {
             ObjectType::AccountSettings => "AccountSettings",
             ObjectType::AcmeProvider => "AcmeProvider",
             ObjectType::Action => "Action",
-            ObjectType::AddressBook => "AddressBook",
             ObjectType::AiModel => "AiModel",
             ObjectType::Alert => "Alert",
             ObjectType::AllowedIp => "AllowedIp",
@@ -156,9 +149,6 @@ impl EnumImpl for ObjectType {
             ObjectType::BlockedIp => "BlockedIp",
             ObjectType::Bootstrap => "Bootstrap",
             ObjectType::Cache => "Cache",
-            ObjectType::Calendar => "Calendar",
-            ObjectType::CalendarAlarm => "CalendarAlarm",
-            ObjectType::CalendarScheduling => "CalendarScheduling",
             ObjectType::Certificate => "Certificate",
             ObjectType::ClusterNode => "ClusterNode",
             ObjectType::ClusterRole => "ClusterRole",
@@ -178,7 +168,6 @@ impl EnumImpl for ObjectType {
             ObjectType::Email => "Email",
             ObjectType::Enterprise => "Enterprise",
             ObjectType::EventTracingLevel => "EventTracingLevel",
-            ObjectType::FileStorage => "FileStorage",
             ObjectType::Http => "Http",
             ObjectType::HttpForm => "HttpForm",
             ObjectType::HttpLookup => "HttpLookup",
@@ -251,7 +240,6 @@ impl EnumImpl for ObjectType {
             ObjectType::Trace => "Trace",
             ObjectType::Tracer => "Tracer",
             ObjectType::TracingStore => "TracingStore",
-            ObjectType::WebDav => "WebDav",
             ObjectType::WebHook => "WebHook",
         }
     }
@@ -267,7 +255,6 @@ impl EnumImpl for ObjectType {
             2 => Some(ObjectType::AccountSettings),
             3 => Some(ObjectType::AcmeProvider),
             4 => Some(ObjectType::Action),
-            5 => Some(ObjectType::AddressBook),
             6 => Some(ObjectType::AiModel),
             7 => Some(ObjectType::Alert),
             8 => Some(ObjectType::AllowedIp),
@@ -282,9 +269,6 @@ impl EnumImpl for ObjectType {
             17 => Some(ObjectType::BlockedIp),
             18 => Some(ObjectType::Bootstrap),
             19 => Some(ObjectType::Cache),
-            20 => Some(ObjectType::Calendar),
-            21 => Some(ObjectType::CalendarAlarm),
-            22 => Some(ObjectType::CalendarScheduling),
             23 => Some(ObjectType::Certificate),
             24 => Some(ObjectType::ClusterNode),
             25 => Some(ObjectType::ClusterRole),
@@ -304,7 +288,6 @@ impl EnumImpl for ObjectType {
             39 => Some(ObjectType::Email),
             40 => Some(ObjectType::Enterprise),
             41 => Some(ObjectType::EventTracingLevel),
-            42 => Some(ObjectType::FileStorage),
             43 => Some(ObjectType::Http),
             44 => Some(ObjectType::HttpForm),
             45 => Some(ObjectType::HttpLookup),
@@ -377,7 +360,6 @@ impl EnumImpl for ObjectType {
             112 => Some(ObjectType::Trace),
             113 => Some(ObjectType::Tracer),
             114 => Some(ObjectType::TracingStore),
-            115 => Some(ObjectType::WebDav),
             116 => Some(ObjectType::WebHook),
             _ => None,
         }
@@ -1340,7 +1322,6 @@ impl EnumImpl for Property {
             b"userOcid" => Property::UserOcid,
             b"username" => Property::Username,
             b"usernameDomain" => Property::UsernameDomain,
-            b"vCardVersion" => Property::VCardVersion,
             b"validateDomain" => Property::ValidateDomain,
             b"value" => Property::Value,
             b"variableName" => Property::VariableName,
@@ -2296,7 +2277,6 @@ impl EnumImpl for Property {
             Property::UserOcid => "userOcid",
             Property::Username => "username",
             Property::UsernameDomain => "usernameDomain",
-            Property::VCardVersion => "vCardVersion",
             Property::ValidateDomain => "validateDomain",
             Property::Value => "value",
             Property::VariableName => "variableName",
@@ -3255,7 +3235,6 @@ impl EnumImpl for Property {
             901 => Some(Property::UserOcid),
             131 => Some(Property::Username),
             610 => Some(Property::UsernameDomain),
-            931 => Some(Property::VCardVersion),
             413 => Some(Property::ValidateDomain),
             492 => Some(Property::Value),
             675 => Some(Property::VariableName),
@@ -3307,7 +3286,6 @@ impl ObjectType {
             ObjectType::AccountSettings => AccountSettings::FLAGS,
             ObjectType::AcmeProvider => AcmeProvider::FLAGS,
             ObjectType::Action => Action::FLAGS,
-            ObjectType::AddressBook => AddressBook::FLAGS,
             ObjectType::AiModel => AiModel::FLAGS,
             ObjectType::Alert => Alert::FLAGS,
             ObjectType::AllowedIp => AllowedIp::FLAGS,
@@ -3322,9 +3300,6 @@ impl ObjectType {
             ObjectType::BlockedIp => BlockedIp::FLAGS,
             ObjectType::Bootstrap => Bootstrap::FLAGS,
             ObjectType::Cache => Cache::FLAGS,
-            ObjectType::Calendar => Calendar::FLAGS,
-            ObjectType::CalendarAlarm => CalendarAlarm::FLAGS,
-            ObjectType::CalendarScheduling => CalendarScheduling::FLAGS,
             ObjectType::Certificate => Certificate::FLAGS,
             ObjectType::ClusterNode => ClusterNode::FLAGS,
             ObjectType::ClusterRole => ClusterRole::FLAGS,
@@ -3344,7 +3319,6 @@ impl ObjectType {
             ObjectType::Email => Email::FLAGS,
             ObjectType::Enterprise => Enterprise::FLAGS,
             ObjectType::EventTracingLevel => EventTracingLevel::FLAGS,
-            ObjectType::FileStorage => FileStorage::FLAGS,
             ObjectType::Http => Http::FLAGS,
             ObjectType::HttpForm => HttpForm::FLAGS,
             ObjectType::HttpLookup => HttpLookup::FLAGS,
@@ -3417,7 +3391,6 @@ impl ObjectType {
             ObjectType::Trace => Trace::FLAGS,
             ObjectType::Tracer => Tracer::FLAGS,
             ObjectType::TracingStore => TracingStore::FLAGS,
-            ObjectType::WebDav => WebDav::FLAGS,
             ObjectType::WebHook => WebHook::FLAGS,
         }
     }
@@ -3684,7 +3657,6 @@ impl ObjectType {
             ObjectType::AccountSettings => Permission::SysAccountSettingsGet,
             ObjectType::AcmeProvider => Permission::SysAcmeProviderGet,
             ObjectType::Action => Permission::SysActionGet,
-            ObjectType::AddressBook => Permission::SysAddressBookGet,
             ObjectType::AiModel => Permission::SysAiModelGet,
             ObjectType::Alert => Permission::SysAlertGet,
             ObjectType::AllowedIp => Permission::SysAllowedIpGet,
@@ -3699,9 +3671,6 @@ impl ObjectType {
             ObjectType::BlockedIp => Permission::SysBlockedIpGet,
             ObjectType::Bootstrap => Permission::SysBootstrapGet,
             ObjectType::Cache => Permission::SysCacheGet,
-            ObjectType::Calendar => Permission::SysCalendarGet,
-            ObjectType::CalendarAlarm => Permission::SysCalendarAlarmGet,
-            ObjectType::CalendarScheduling => Permission::SysCalendarSchedulingGet,
             ObjectType::Certificate => Permission::SysCertificateGet,
             ObjectType::ClusterNode => Permission::SysClusterNodeGet,
             ObjectType::ClusterRole => Permission::SysClusterRoleGet,
@@ -3721,7 +3690,6 @@ impl ObjectType {
             ObjectType::Email => Permission::SysEmailGet,
             ObjectType::Enterprise => Permission::SysEnterpriseGet,
             ObjectType::EventTracingLevel => Permission::SysEventTracingLevelGet,
-            ObjectType::FileStorage => Permission::SysFileStorageGet,
             ObjectType::Http => Permission::SysHttpGet,
             ObjectType::HttpForm => Permission::SysHttpFormGet,
             ObjectType::HttpLookup => Permission::SysHttpLookupGet,
@@ -3794,7 +3762,6 @@ impl ObjectType {
             ObjectType::Trace => Permission::SysTraceGet,
             ObjectType::Tracer => Permission::SysTracerGet,
             ObjectType::TracingStore => Permission::SysTracingStoreGet,
-            ObjectType::WebDav => Permission::SysWebDavGet,
             ObjectType::WebHook => Permission::SysWebHookGet,
         }
     }
@@ -3891,11 +3858,6 @@ impl ObjectType {
                 Permission::SysActionUpdate,
                 Permission::SysActionDestroy,
             ],
-            ObjectType::AddressBook => [
-                Permission::SysAddressBookUpdate,
-                Permission::SysAddressBookUpdate,
-                Permission::SysAddressBookUpdate,
-            ],
             ObjectType::AiModel => [
                 Permission::SysAiModelCreate,
                 Permission::SysAiModelUpdate,
@@ -3965,21 +3927,6 @@ impl ObjectType {
                 Permission::SysCacheUpdate,
                 Permission::SysCacheUpdate,
                 Permission::SysCacheUpdate,
-            ],
-            ObjectType::Calendar => [
-                Permission::SysCalendarUpdate,
-                Permission::SysCalendarUpdate,
-                Permission::SysCalendarUpdate,
-            ],
-            ObjectType::CalendarAlarm => [
-                Permission::SysCalendarAlarmUpdate,
-                Permission::SysCalendarAlarmUpdate,
-                Permission::SysCalendarAlarmUpdate,
-            ],
-            ObjectType::CalendarScheduling => [
-                Permission::SysCalendarSchedulingUpdate,
-                Permission::SysCalendarSchedulingUpdate,
-                Permission::SysCalendarSchedulingUpdate,
             ],
             ObjectType::Certificate => [
                 Permission::SysCertificateCreate,
@@ -4075,11 +4022,6 @@ impl ObjectType {
                 Permission::SysEventTracingLevelCreate,
                 Permission::SysEventTracingLevelUpdate,
                 Permission::SysEventTracingLevelDestroy,
-            ],
-            ObjectType::FileStorage => [
-                Permission::SysFileStorageUpdate,
-                Permission::SysFileStorageUpdate,
-                Permission::SysFileStorageUpdate,
             ],
             ObjectType::Http => [
                 Permission::SysHttpUpdate,
@@ -4441,11 +4383,6 @@ impl ObjectType {
                 Permission::SysTracingStoreUpdate,
                 Permission::SysTracingStoreUpdate,
             ],
-            ObjectType::WebDav => [
-                Permission::SysWebDavUpdate,
-                Permission::SysWebDavUpdate,
-                Permission::SysWebDavUpdate,
-            ],
             ObjectType::WebHook => [
                 Permission::SysWebHookCreate,
                 Permission::SysWebHookUpdate,
@@ -4659,18 +4596,12 @@ impl ObjectInner {
     pub fn account_id(&self) -> Option<Id> {
         match self {
             ObjectInner::ArchivedItem(ArchivedItem::Email(obj)) => Some(obj.account_id),
-            ObjectInner::ArchivedItem(ArchivedItem::FileNode(obj)) => Some(obj.account_id),
-            ObjectInner::ArchivedItem(ArchivedItem::CalendarEvent(obj)) => Some(obj.account_id),
-            ObjectInner::ArchivedItem(ArchivedItem::ContactCard(obj)) => Some(obj.account_id),
             ObjectInner::ArchivedItem(ArchivedItem::SieveScript(obj)) => Some(obj.account_id),
             ObjectInner::MaskedEmail(obj) => Some(obj.account_id),
             ObjectInner::PublicKey(obj) => Some(obj.account_id),
             ObjectInner::SpamTrainingSample(obj) => obj.account_id,
             ObjectInner::Task(Task::IndexDocument(obj)) => Some(obj.account_id),
             ObjectInner::Task(Task::UnindexDocument(obj)) => Some(obj.account_id),
-            ObjectInner::Task(Task::CalendarAlarmEmail(obj)) => Some(obj.account_id),
-            ObjectInner::Task(Task::CalendarAlarmNotification(obj)) => Some(obj.account_id),
-            ObjectInner::Task(Task::CalendarItipMessage(obj)) => Some(obj.account_id),
             ObjectInner::Task(Task::MergeThreads(obj)) => Some(obj.account_id),
             ObjectInner::Task(Task::RestoreArchivedItem(obj)) => Some(obj.account_id),
             ObjectInner::Task(Task::DestroyAccount(obj)) => Some(obj.account_id),
@@ -4682,18 +4613,12 @@ impl ObjectInner {
     pub fn set_account_id(&mut self, id: Id) {
         match self {
             ObjectInner::ArchivedItem(ArchivedItem::Email(obj)) => obj.account_id = id,
-            ObjectInner::ArchivedItem(ArchivedItem::FileNode(obj)) => obj.account_id = id,
-            ObjectInner::ArchivedItem(ArchivedItem::CalendarEvent(obj)) => obj.account_id = id,
-            ObjectInner::ArchivedItem(ArchivedItem::ContactCard(obj)) => obj.account_id = id,
             ObjectInner::ArchivedItem(ArchivedItem::SieveScript(obj)) => obj.account_id = id,
             ObjectInner::MaskedEmail(obj) => obj.account_id = id,
             ObjectInner::PublicKey(obj) => obj.account_id = id,
             ObjectInner::SpamTrainingSample(obj) => obj.account_id = Some(id),
             ObjectInner::Task(Task::IndexDocument(obj)) => obj.account_id = id,
             ObjectInner::Task(Task::UnindexDocument(obj)) => obj.account_id = id,
-            ObjectInner::Task(Task::CalendarAlarmEmail(obj)) => obj.account_id = id,
-            ObjectInner::Task(Task::CalendarAlarmNotification(obj)) => obj.account_id = id,
-            ObjectInner::Task(Task::CalendarItipMessage(obj)) => obj.account_id = id,
             ObjectInner::Task(Task::MergeThreads(obj)) => obj.account_id = id,
             ObjectInner::Task(Task::RestoreArchivedItem(obj)) => obj.account_id = id,
             ObjectInner::Task(Task::DestroyAccount(obj)) => obj.account_id = id,
@@ -4709,7 +4634,6 @@ impl ObjectInner {
             ObjectInner::AccountSettings(obj) => obj.to_pickled_vec(),
             ObjectInner::AcmeProvider(obj) => obj.to_pickled_vec(),
             ObjectInner::Action(obj) => obj.to_pickled_vec(),
-            ObjectInner::AddressBook(obj) => obj.to_pickled_vec(),
             ObjectInner::AiModel(obj) => obj.to_pickled_vec(),
             ObjectInner::Alert(obj) => obj.to_pickled_vec(),
             ObjectInner::AllowedIp(obj) => obj.to_pickled_vec(),
@@ -4724,9 +4648,6 @@ impl ObjectInner {
             ObjectInner::BlockedIp(obj) => obj.to_pickled_vec(),
             ObjectInner::Bootstrap(obj) => obj.to_pickled_vec(),
             ObjectInner::Cache(obj) => obj.to_pickled_vec(),
-            ObjectInner::Calendar(obj) => obj.to_pickled_vec(),
-            ObjectInner::CalendarAlarm(obj) => obj.to_pickled_vec(),
-            ObjectInner::CalendarScheduling(obj) => obj.to_pickled_vec(),
             ObjectInner::Certificate(obj) => obj.to_pickled_vec(),
             ObjectInner::ClusterNode(obj) => obj.to_pickled_vec(),
             ObjectInner::ClusterRole(obj) => obj.to_pickled_vec(),
@@ -4746,7 +4667,6 @@ impl ObjectInner {
             ObjectInner::Email(obj) => obj.to_pickled_vec(),
             ObjectInner::Enterprise(obj) => obj.to_pickled_vec(),
             ObjectInner::EventTracingLevel(obj) => obj.to_pickled_vec(),
-            ObjectInner::FileStorage(obj) => obj.to_pickled_vec(),
             ObjectInner::Http(obj) => obj.to_pickled_vec(),
             ObjectInner::HttpForm(obj) => obj.to_pickled_vec(),
             ObjectInner::HttpLookup(obj) => obj.to_pickled_vec(),
@@ -4819,7 +4739,6 @@ impl ObjectInner {
             ObjectInner::Trace(obj) => obj.to_pickled_vec(),
             ObjectInner::Tracer(obj) => obj.to_pickled_vec(),
             ObjectInner::TracingStore(obj) => obj.to_pickled_vec(),
-            ObjectInner::WebDav(obj) => obj.to_pickled_vec(),
             ObjectInner::WebHook(obj) => obj.to_pickled_vec(),
         }
     }
@@ -4838,7 +4757,6 @@ impl ObjectInner {
             }
             ObjectType::AcmeProvider => Pickle::unpickle(stream).map(ObjectInner::AcmeProvider),
             ObjectType::Action => Pickle::unpickle(stream).map(ObjectInner::Action),
-            ObjectType::AddressBook => Pickle::unpickle(stream).map(ObjectInner::AddressBook),
             ObjectType::AiModel => Pickle::unpickle(stream).map(ObjectInner::AiModel),
             ObjectType::Alert => Pickle::unpickle(stream).map(ObjectInner::Alert),
             ObjectType::AllowedIp => Pickle::unpickle(stream).map(ObjectInner::AllowedIp),
@@ -4855,11 +4773,6 @@ impl ObjectInner {
             ObjectType::BlockedIp => Pickle::unpickle(stream).map(ObjectInner::BlockedIp),
             ObjectType::Bootstrap => Pickle::unpickle(stream).map(ObjectInner::Bootstrap),
             ObjectType::Cache => Pickle::unpickle(stream).map(ObjectInner::Cache),
-            ObjectType::Calendar => Pickle::unpickle(stream).map(ObjectInner::Calendar),
-            ObjectType::CalendarAlarm => Pickle::unpickle(stream).map(ObjectInner::CalendarAlarm),
-            ObjectType::CalendarScheduling => {
-                Pickle::unpickle(stream).map(ObjectInner::CalendarScheduling)
-            }
             ObjectType::Certificate => Pickle::unpickle(stream).map(ObjectInner::Certificate),
             ObjectType::ClusterNode => Pickle::unpickle(stream).map(ObjectInner::ClusterNode),
             ObjectType::ClusterRole => Pickle::unpickle(stream).map(ObjectInner::ClusterRole),
@@ -4891,7 +4804,6 @@ impl ObjectInner {
             ObjectType::EventTracingLevel => {
                 Pickle::unpickle(stream).map(ObjectInner::EventTracingLevel)
             }
-            ObjectType::FileStorage => Pickle::unpickle(stream).map(ObjectInner::FileStorage),
             ObjectType::Http => Pickle::unpickle(stream).map(ObjectInner::Http),
             ObjectType::HttpForm => Pickle::unpickle(stream).map(ObjectInner::HttpForm),
             ObjectType::HttpLookup => Pickle::unpickle(stream).map(ObjectInner::HttpLookup),
@@ -5010,7 +4922,6 @@ impl ObjectInner {
             ObjectType::Trace => Pickle::unpickle(stream).map(ObjectInner::Trace),
             ObjectType::Tracer => Pickle::unpickle(stream).map(ObjectInner::Tracer),
             ObjectType::TracingStore => Pickle::unpickle(stream).map(ObjectInner::TracingStore),
-            ObjectType::WebDav => Pickle::unpickle(stream).map(ObjectInner::WebDav),
             ObjectType::WebHook => Pickle::unpickle(stream).map(ObjectInner::WebHook),
         }
     }
@@ -5031,9 +4942,6 @@ impl ObjectInner {
                 AcmeProvider::deserialize(deserializer).map(ObjectInner::AcmeProvider)
             }
             ObjectType::Action => Action::deserialize(deserializer).map(ObjectInner::Action),
-            ObjectType::AddressBook => {
-                AddressBook::deserialize(deserializer).map(ObjectInner::AddressBook)
-            }
             ObjectType::AiModel => AiModel::deserialize(deserializer).map(ObjectInner::AiModel),
             ObjectType::Alert => Alert::deserialize(deserializer).map(ObjectInner::Alert),
             ObjectType::AllowedIp => {
@@ -5066,13 +4974,6 @@ impl ObjectInner {
                 Bootstrap::deserialize(deserializer).map(ObjectInner::Bootstrap)
             }
             ObjectType::Cache => Cache::deserialize(deserializer).map(ObjectInner::Cache),
-            ObjectType::Calendar => Calendar::deserialize(deserializer).map(ObjectInner::Calendar),
-            ObjectType::CalendarAlarm => {
-                CalendarAlarm::deserialize(deserializer).map(ObjectInner::CalendarAlarm)
-            }
-            ObjectType::CalendarScheduling => {
-                CalendarScheduling::deserialize(deserializer).map(ObjectInner::CalendarScheduling)
-            }
             ObjectType::Certificate => {
                 Certificate::deserialize(deserializer).map(ObjectInner::Certificate)
             }
@@ -5125,9 +5026,6 @@ impl ObjectInner {
             }
             ObjectType::EventTracingLevel => {
                 EventTracingLevel::deserialize(deserializer).map(ObjectInner::EventTracingLevel)
-            }
-            ObjectType::FileStorage => {
-                FileStorage::deserialize(deserializer).map(ObjectInner::FileStorage)
             }
             ObjectType::Http => Http::deserialize(deserializer).map(ObjectInner::Http),
             ObjectType::HttpForm => HttpForm::deserialize(deserializer).map(ObjectInner::HttpForm),
@@ -5299,7 +5197,6 @@ impl ObjectInner {
             ObjectType::TracingStore => {
                 TracingStore::deserialize(deserializer).map(ObjectInner::TracingStore)
             }
-            ObjectType::WebDav => WebDav::deserialize(deserializer).map(ObjectInner::WebDav),
             ObjectType::WebHook => WebHook::deserialize(deserializer).map(ObjectInner::WebHook),
         }
     }
@@ -5346,7 +5243,6 @@ impl Object {
             ObjectInner::AccountSettings(_) => AccountSettings::FLAGS,
             ObjectInner::AcmeProvider(_) => AcmeProvider::FLAGS,
             ObjectInner::Action(_) => Action::FLAGS,
-            ObjectInner::AddressBook(_) => AddressBook::FLAGS,
             ObjectInner::AiModel(_) => AiModel::FLAGS,
             ObjectInner::Alert(_) => Alert::FLAGS,
             ObjectInner::AllowedIp(_) => AllowedIp::FLAGS,
@@ -5361,9 +5257,6 @@ impl Object {
             ObjectInner::BlockedIp(_) => BlockedIp::FLAGS,
             ObjectInner::Bootstrap(_) => Bootstrap::FLAGS,
             ObjectInner::Cache(_) => Cache::FLAGS,
-            ObjectInner::Calendar(_) => Calendar::FLAGS,
-            ObjectInner::CalendarAlarm(_) => CalendarAlarm::FLAGS,
-            ObjectInner::CalendarScheduling(_) => CalendarScheduling::FLAGS,
             ObjectInner::Certificate(_) => Certificate::FLAGS,
             ObjectInner::ClusterNode(_) => ClusterNode::FLAGS,
             ObjectInner::ClusterRole(_) => ClusterRole::FLAGS,
@@ -5383,7 +5276,6 @@ impl Object {
             ObjectInner::Email(_) => Email::FLAGS,
             ObjectInner::Enterprise(_) => Enterprise::FLAGS,
             ObjectInner::EventTracingLevel(_) => EventTracingLevel::FLAGS,
-            ObjectInner::FileStorage(_) => FileStorage::FLAGS,
             ObjectInner::Http(_) => Http::FLAGS,
             ObjectInner::HttpForm(_) => HttpForm::FLAGS,
             ObjectInner::HttpLookup(_) => HttpLookup::FLAGS,
@@ -5456,7 +5348,6 @@ impl Object {
             ObjectInner::Trace(_) => Trace::FLAGS,
             ObjectInner::Tracer(_) => Tracer::FLAGS,
             ObjectInner::TracingStore(_) => TracingStore::FLAGS,
-            ObjectInner::WebDav(_) => WebDav::FLAGS,
             ObjectInner::WebHook(_) => WebHook::FLAGS,
         }
     }
@@ -5468,7 +5359,6 @@ impl Object {
             ObjectInner::AccountSettings(_) => ObjectType::AccountSettings,
             ObjectInner::AcmeProvider(_) => ObjectType::AcmeProvider,
             ObjectInner::Action(_) => ObjectType::Action,
-            ObjectInner::AddressBook(_) => ObjectType::AddressBook,
             ObjectInner::AiModel(_) => ObjectType::AiModel,
             ObjectInner::Alert(_) => ObjectType::Alert,
             ObjectInner::AllowedIp(_) => ObjectType::AllowedIp,
@@ -5483,9 +5373,6 @@ impl Object {
             ObjectInner::BlockedIp(_) => ObjectType::BlockedIp,
             ObjectInner::Bootstrap(_) => ObjectType::Bootstrap,
             ObjectInner::Cache(_) => ObjectType::Cache,
-            ObjectInner::Calendar(_) => ObjectType::Calendar,
-            ObjectInner::CalendarAlarm(_) => ObjectType::CalendarAlarm,
-            ObjectInner::CalendarScheduling(_) => ObjectType::CalendarScheduling,
             ObjectInner::Certificate(_) => ObjectType::Certificate,
             ObjectInner::ClusterNode(_) => ObjectType::ClusterNode,
             ObjectInner::ClusterRole(_) => ObjectType::ClusterRole,
@@ -5505,7 +5392,6 @@ impl Object {
             ObjectInner::Email(_) => ObjectType::Email,
             ObjectInner::Enterprise(_) => ObjectType::Enterprise,
             ObjectInner::EventTracingLevel(_) => ObjectType::EventTracingLevel,
-            ObjectInner::FileStorage(_) => ObjectType::FileStorage,
             ObjectInner::Http(_) => ObjectType::Http,
             ObjectInner::HttpForm(_) => ObjectType::HttpForm,
             ObjectInner::HttpLookup(_) => ObjectType::HttpLookup,
@@ -5578,7 +5464,6 @@ impl Object {
             ObjectInner::Trace(_) => ObjectType::Trace,
             ObjectInner::Tracer(_) => ObjectType::Tracer,
             ObjectInner::TracingStore(_) => ObjectType::TracingStore,
-            ObjectInner::WebDav(_) => ObjectType::WebDav,
             ObjectInner::WebHook(_) => ObjectType::WebHook,
         }
     }
@@ -5619,7 +5504,6 @@ impl Object {
             ObjectInner::AccountSettings(obj) => obj.validate(errors),
             ObjectInner::AcmeProvider(obj) => obj.validate(errors),
             ObjectInner::Action(obj) => obj.validate(errors),
-            ObjectInner::AddressBook(obj) => obj.validate(errors),
             ObjectInner::AiModel(obj) => obj.validate(errors),
             ObjectInner::Alert(obj) => obj.validate(errors),
             ObjectInner::AllowedIp(obj) => obj.validate(errors),
@@ -5634,9 +5518,6 @@ impl Object {
             ObjectInner::BlockedIp(obj) => obj.validate(errors),
             ObjectInner::Bootstrap(obj) => obj.validate(errors),
             ObjectInner::Cache(obj) => obj.validate(errors),
-            ObjectInner::Calendar(obj) => obj.validate(errors),
-            ObjectInner::CalendarAlarm(obj) => obj.validate(errors),
-            ObjectInner::CalendarScheduling(obj) => obj.validate(errors),
             ObjectInner::Certificate(obj) => obj.validate(errors),
             ObjectInner::ClusterNode(obj) => obj.validate(errors),
             ObjectInner::ClusterRole(obj) => obj.validate(errors),
@@ -5656,7 +5537,6 @@ impl Object {
             ObjectInner::Email(obj) => obj.validate(errors),
             ObjectInner::Enterprise(obj) => obj.validate(errors),
             ObjectInner::EventTracingLevel(obj) => obj.validate(errors),
-            ObjectInner::FileStorage(obj) => obj.validate(errors),
             ObjectInner::Http(obj) => obj.validate(errors),
             ObjectInner::HttpForm(obj) => obj.validate(errors),
             ObjectInner::HttpLookup(obj) => obj.validate(errors),
@@ -5729,7 +5609,6 @@ impl Object {
             ObjectInner::Trace(obj) => obj.validate(errors),
             ObjectInner::Tracer(obj) => obj.validate(errors),
             ObjectInner::TracingStore(obj) => obj.validate(errors),
-            ObjectInner::WebDav(obj) => obj.validate(errors),
             ObjectInner::WebHook(obj) => obj.validate(errors),
         }
     }
@@ -5741,7 +5620,6 @@ impl Object {
             ObjectInner::AccountSettings(obj) => obj.index(i),
             ObjectInner::AcmeProvider(obj) => obj.index(i),
             ObjectInner::Action(obj) => obj.index(i),
-            ObjectInner::AddressBook(obj) => obj.index(i),
             ObjectInner::AiModel(obj) => obj.index(i),
             ObjectInner::Alert(obj) => obj.index(i),
             ObjectInner::AllowedIp(obj) => obj.index(i),
@@ -5756,9 +5634,6 @@ impl Object {
             ObjectInner::BlockedIp(obj) => obj.index(i),
             ObjectInner::Bootstrap(obj) => obj.index(i),
             ObjectInner::Cache(obj) => obj.index(i),
-            ObjectInner::Calendar(obj) => obj.index(i),
-            ObjectInner::CalendarAlarm(obj) => obj.index(i),
-            ObjectInner::CalendarScheduling(obj) => obj.index(i),
             ObjectInner::Certificate(obj) => obj.index(i),
             ObjectInner::ClusterNode(obj) => obj.index(i),
             ObjectInner::ClusterRole(obj) => obj.index(i),
@@ -5778,7 +5653,6 @@ impl Object {
             ObjectInner::Email(obj) => obj.index(i),
             ObjectInner::Enterprise(obj) => obj.index(i),
             ObjectInner::EventTracingLevel(obj) => obj.index(i),
-            ObjectInner::FileStorage(obj) => obj.index(i),
             ObjectInner::Http(obj) => obj.index(i),
             ObjectInner::HttpForm(obj) => obj.index(i),
             ObjectInner::HttpLookup(obj) => obj.index(i),
@@ -5851,7 +5725,6 @@ impl Object {
             ObjectInner::Trace(obj) => obj.index(i),
             ObjectInner::Tracer(obj) => obj.index(i),
             ObjectInner::TracingStore(obj) => obj.index(i),
-            ObjectInner::WebDav(obj) => obj.index(i),
             ObjectInner::WebHook(obj) => obj.index(i),
         }
     }
@@ -5867,7 +5740,6 @@ impl Object {
             ObjectInner::AccountSettings(obj) => obj.patch(pointer, value),
             ObjectInner::AcmeProvider(obj) => obj.patch(pointer, value),
             ObjectInner::Action(obj) => obj.patch(pointer, value),
-            ObjectInner::AddressBook(obj) => obj.patch(pointer, value),
             ObjectInner::AiModel(obj) => obj.patch(pointer, value),
             ObjectInner::Alert(obj) => obj.patch(pointer, value),
             ObjectInner::AllowedIp(obj) => obj.patch(pointer, value),
@@ -5882,9 +5754,6 @@ impl Object {
             ObjectInner::BlockedIp(obj) => obj.patch(pointer, value),
             ObjectInner::Bootstrap(obj) => obj.patch(pointer, value),
             ObjectInner::Cache(obj) => obj.patch(pointer, value),
-            ObjectInner::Calendar(obj) => obj.patch(pointer, value),
-            ObjectInner::CalendarAlarm(obj) => obj.patch(pointer, value),
-            ObjectInner::CalendarScheduling(obj) => obj.patch(pointer, value),
             ObjectInner::Certificate(obj) => obj.patch(pointer, value),
             ObjectInner::ClusterNode(obj) => obj.patch(pointer, value),
             ObjectInner::ClusterRole(obj) => obj.patch(pointer, value),
@@ -5904,7 +5773,6 @@ impl Object {
             ObjectInner::Email(obj) => obj.patch(pointer, value),
             ObjectInner::Enterprise(obj) => obj.patch(pointer, value),
             ObjectInner::EventTracingLevel(obj) => obj.patch(pointer, value),
-            ObjectInner::FileStorage(obj) => obj.patch(pointer, value),
             ObjectInner::Http(obj) => obj.patch(pointer, value),
             ObjectInner::HttpForm(obj) => obj.patch(pointer, value),
             ObjectInner::HttpLookup(obj) => obj.patch(pointer, value),
@@ -5977,7 +5845,6 @@ impl Object {
             ObjectInner::Trace(obj) => obj.patch(pointer, value),
             ObjectInner::Tracer(obj) => obj.patch(pointer, value),
             ObjectInner::TracingStore(obj) => obj.patch(pointer, value),
-            ObjectInner::WebDav(obj) => obj.patch(pointer, value),
             ObjectInner::WebHook(obj) => obj.patch(pointer, value),
         }
     }
@@ -5991,7 +5858,6 @@ impl IntoValue for Object {
             ObjectInner::AccountSettings(obj) => obj.into_value(),
             ObjectInner::AcmeProvider(obj) => obj.into_value(),
             ObjectInner::Action(obj) => obj.into_value(),
-            ObjectInner::AddressBook(obj) => obj.into_value(),
             ObjectInner::AiModel(obj) => obj.into_value(),
             ObjectInner::Alert(obj) => obj.into_value(),
             ObjectInner::AllowedIp(obj) => obj.into_value(),
@@ -6006,9 +5872,6 @@ impl IntoValue for Object {
             ObjectInner::BlockedIp(obj) => obj.into_value(),
             ObjectInner::Bootstrap(obj) => obj.into_value(),
             ObjectInner::Cache(obj) => obj.into_value(),
-            ObjectInner::Calendar(obj) => obj.into_value(),
-            ObjectInner::CalendarAlarm(obj) => obj.into_value(),
-            ObjectInner::CalendarScheduling(obj) => obj.into_value(),
             ObjectInner::Certificate(obj) => obj.into_value(),
             ObjectInner::ClusterNode(obj) => obj.into_value(),
             ObjectInner::ClusterRole(obj) => obj.into_value(),
@@ -6028,7 +5891,6 @@ impl IntoValue for Object {
             ObjectInner::Email(obj) => obj.into_value(),
             ObjectInner::Enterprise(obj) => obj.into_value(),
             ObjectInner::EventTracingLevel(obj) => obj.into_value(),
-            ObjectInner::FileStorage(obj) => obj.into_value(),
             ObjectInner::Http(obj) => obj.into_value(),
             ObjectInner::HttpForm(obj) => obj.into_value(),
             ObjectInner::HttpLookup(obj) => obj.into_value(),
@@ -6101,7 +5963,6 @@ impl IntoValue for Object {
             ObjectInner::Trace(obj) => obj.into_value(),
             ObjectInner::Tracer(obj) => obj.into_value(),
             ObjectInner::TracingStore(obj) => obj.into_value(),
-            ObjectInner::WebDav(obj) => obj.into_value(),
             ObjectInner::WebHook(obj) => obj.into_value(),
         }
     }
@@ -6115,7 +5976,6 @@ impl From<ObjectType> for ObjectInner {
             ObjectType::AccountSettings => ObjectInner::AccountSettings(Default::default()),
             ObjectType::AcmeProvider => ObjectInner::AcmeProvider(Default::default()),
             ObjectType::Action => ObjectInner::Action(Default::default()),
-            ObjectType::AddressBook => ObjectInner::AddressBook(Default::default()),
             ObjectType::AiModel => ObjectInner::AiModel(Default::default()),
             ObjectType::Alert => ObjectInner::Alert(Default::default()),
             ObjectType::AllowedIp => ObjectInner::AllowedIp(Default::default()),
@@ -6130,9 +5990,6 @@ impl From<ObjectType> for ObjectInner {
             ObjectType::BlockedIp => ObjectInner::BlockedIp(Default::default()),
             ObjectType::Bootstrap => ObjectInner::Bootstrap(Default::default()),
             ObjectType::Cache => ObjectInner::Cache(Default::default()),
-            ObjectType::Calendar => ObjectInner::Calendar(Default::default()),
-            ObjectType::CalendarAlarm => ObjectInner::CalendarAlarm(Default::default()),
-            ObjectType::CalendarScheduling => ObjectInner::CalendarScheduling(Default::default()),
             ObjectType::Certificate => ObjectInner::Certificate(Default::default()),
             ObjectType::ClusterNode => ObjectInner::ClusterNode(Default::default()),
             ObjectType::ClusterRole => ObjectInner::ClusterRole(Default::default()),
@@ -6152,7 +6009,6 @@ impl From<ObjectType> for ObjectInner {
             ObjectType::Email => ObjectInner::Email(Default::default()),
             ObjectType::Enterprise => ObjectInner::Enterprise(Default::default()),
             ObjectType::EventTracingLevel => ObjectInner::EventTracingLevel(Default::default()),
-            ObjectType::FileStorage => ObjectInner::FileStorage(Default::default()),
             ObjectType::Http => ObjectInner::Http(Default::default()),
             ObjectType::HttpForm => ObjectInner::HttpForm(Default::default()),
             ObjectType::HttpLookup => ObjectInner::HttpLookup(Default::default()),
@@ -6233,7 +6089,6 @@ impl From<ObjectType> for ObjectInner {
             ObjectType::Trace => ObjectInner::Trace(Default::default()),
             ObjectType::Tracer => ObjectInner::Tracer(Default::default()),
             ObjectType::TracingStore => ObjectInner::TracingStore(Default::default()),
-            ObjectType::WebDav => ObjectInner::WebDav(Default::default()),
             ObjectType::WebHook => ObjectInner::WebHook(Default::default()),
         }
     }
@@ -6309,21 +6164,6 @@ impl From<Object> for Action {
     fn from(obj: Object) -> Self {
         match obj.inner {
             ObjectInner::Action(obj) => obj,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<AddressBook> for ObjectInner {
-    fn from(value: AddressBook) -> Self {
-        ObjectInner::AddressBook(value)
-    }
-}
-
-impl From<Object> for AddressBook {
-    fn from(obj: Object) -> Self {
-        match obj.inner {
-            ObjectInner::AddressBook(obj) => obj,
             _ => unreachable!(),
         }
     }
@@ -6534,51 +6374,6 @@ impl From<Object> for Cache {
     fn from(obj: Object) -> Self {
         match obj.inner {
             ObjectInner::Cache(obj) => obj,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<Calendar> for ObjectInner {
-    fn from(value: Calendar) -> Self {
-        ObjectInner::Calendar(value)
-    }
-}
-
-impl From<Object> for Calendar {
-    fn from(obj: Object) -> Self {
-        match obj.inner {
-            ObjectInner::Calendar(obj) => obj,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<CalendarAlarm> for ObjectInner {
-    fn from(value: CalendarAlarm) -> Self {
-        ObjectInner::CalendarAlarm(value)
-    }
-}
-
-impl From<Object> for CalendarAlarm {
-    fn from(obj: Object) -> Self {
-        match obj.inner {
-            ObjectInner::CalendarAlarm(obj) => obj,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<CalendarScheduling> for ObjectInner {
-    fn from(value: CalendarScheduling) -> Self {
-        ObjectInner::CalendarScheduling(value)
-    }
-}
-
-impl From<Object> for CalendarScheduling {
-    fn from(obj: Object) -> Self {
-        match obj.inner {
-            ObjectInner::CalendarScheduling(obj) => obj,
             _ => unreachable!(),
         }
     }
@@ -6864,21 +6659,6 @@ impl From<Object> for EventTracingLevel {
     fn from(obj: Object) -> Self {
         match obj.inner {
             ObjectInner::EventTracingLevel(obj) => obj,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<FileStorage> for ObjectInner {
-    fn from(value: FileStorage) -> Self {
-        ObjectInner::FileStorage(value)
-    }
-}
-
-impl From<Object> for FileStorage {
-    fn from(obj: Object) -> Self {
-        match obj.inner {
-            ObjectInner::FileStorage(obj) => obj,
             _ => unreachable!(),
         }
     }
@@ -7959,21 +7739,6 @@ impl From<Object> for TracingStore {
     fn from(obj: Object) -> Self {
         match obj.inner {
             ObjectInner::TracingStore(obj) => obj,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<WebDav> for ObjectInner {
-    fn from(value: WebDav) -> Self {
-        ObjectInner::WebDav(value)
-    }
-}
-
-impl From<Object> for WebDav {
-    fn from(obj: Object) -> Self {
-        match obj.inner {
-            ObjectInner::WebDav(obj) => obj,
             _ => unreachable!(),
         }
     }

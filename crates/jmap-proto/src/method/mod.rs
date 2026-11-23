@@ -12,7 +12,6 @@ use serde::{
 };
 use std::{borrow::Cow, fmt, str::FromStr};
 
-pub mod availability;
 pub mod changes;
 pub mod copy;
 pub mod get;

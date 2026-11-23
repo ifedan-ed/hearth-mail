@@ -270,59 +270,6 @@ impl<'de> Visitor<'de> for CallVisitor {
                     return Err(de::Error::invalid_length(1, &self));
                 }
             },
-            (MethodFunction::Get, MethodObject::Calendar) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Get(GetRequestMethod::Calendar(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Get, MethodObject::CalendarEvent) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Get(GetRequestMethod::CalendarEvent(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Get, MethodObject::CalendarEventNotification) => {
-                match seq.next_element() {
-                    Ok(Some(value)) => {
-                        RequestMethod::Get(GetRequestMethod::CalendarEventNotification(value))
-                    }
-                    Err(err) => RequestMethod::invalid(err),
-                    Ok(None) => {
-                        return Err(de::Error::invalid_length(1, &self));
-                    }
-                }
-            }
-            (MethodFunction::Get, MethodObject::ParticipantIdentity) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Get(GetRequestMethod::ParticipantIdentity(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Get, MethodObject::AddressBook) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Get(GetRequestMethod::AddressBook(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Get, MethodObject::ContactCard) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Get(GetRequestMethod::ContactCard(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Get, MethodObject::FileNode) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Get(GetRequestMethod::FileNode(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
             (MethodFunction::Get, MethodObject::ShareNotification) => match seq.next_element() {
                 Ok(Some(value)) => RequestMethod::Get(GetRequestMethod::ShareNotification(value)),
                 Err(err) => RequestMethod::invalid(err),
@@ -465,59 +412,6 @@ impl<'de> Visitor<'de> for CallVisitor {
                     return Err(de::Error::invalid_length(1, &self));
                 }
             },
-            (MethodFunction::Set, MethodObject::Calendar) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Set(SetRequestMethod::Calendar(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Set, MethodObject::CalendarEvent) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Set(SetRequestMethod::CalendarEvent(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Set, MethodObject::CalendarEventNotification) => {
-                match seq.next_element() {
-                    Ok(Some(value)) => {
-                        RequestMethod::Set(SetRequestMethod::CalendarEventNotification(value))
-                    }
-                    Err(err) => RequestMethod::invalid(err),
-                    Ok(None) => {
-                        return Err(de::Error::invalid_length(1, &self));
-                    }
-                }
-            }
-            (MethodFunction::Set, MethodObject::ParticipantIdentity) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Set(SetRequestMethod::ParticipantIdentity(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Set, MethodObject::AddressBook) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Set(SetRequestMethod::AddressBook(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Set, MethodObject::ContactCard) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Set(SetRequestMethod::ContactCard(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Set, MethodObject::FileNode) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Set(SetRequestMethod::FileNode(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
             (MethodFunction::Set, MethodObject::ShareNotification) => match seq.next_element() {
                 Ok(Some(value)) => RequestMethod::Set(SetRequestMethod::ShareNotification(value)),
                 Err(err) => RequestMethod::invalid(err),
@@ -569,52 +463,6 @@ impl<'de> Visitor<'de> for CallVisitor {
             },
             (MethodFunction::Query, MethodObject::Quota) => match seq.next_element() {
                 Ok(Some(value)) => RequestMethod::Query(QueryRequestMethod::Quota(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Query, MethodObject::Calendar) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Query(QueryRequestMethod::Calendar(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Query, MethodObject::CalendarEvent) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Query(QueryRequestMethod::CalendarEvent(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Query, MethodObject::CalendarEventNotification) => {
-                match seq.next_element() {
-                    Ok(Some(value)) => {
-                        RequestMethod::Query(QueryRequestMethod::CalendarEventNotification(value))
-                    }
-                    Err(err) => RequestMethod::invalid(err),
-                    Ok(None) => {
-                        return Err(de::Error::invalid_length(1, &self));
-                    }
-                }
-            }
-            (MethodFunction::Query, MethodObject::AddressBook) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Query(QueryRequestMethod::AddressBook(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Query, MethodObject::ContactCard) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Query(QueryRequestMethod::ContactCard(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Query, MethodObject::FileNode) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Query(QueryRequestMethod::FileNode(value)),
                 Err(err) => RequestMethod::invalid(err),
                 Ok(None) => {
                     return Err(de::Error::invalid_length(1, &self));
@@ -1059,45 +907,6 @@ impl<'de> Visitor<'de> for CallVisitor {
                     return Err(de::Error::invalid_length(1, &self));
                 }
             },
-            (MethodFunction::QueryChanges, MethodObject::CalendarEvent) => match seq.next_element()
-            {
-                Ok(Some(value)) => {
-                    RequestMethod::QueryChanges(QueryChangesRequestMethod::CalendarEvent(value))
-                }
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::QueryChanges, MethodObject::CalendarEventNotification) => {
-                match seq.next_element() {
-                    Ok(Some(value)) => RequestMethod::QueryChanges(
-                        QueryChangesRequestMethod::CalendarEventNotification(value),
-                    ),
-                    Err(err) => RequestMethod::invalid(err),
-                    Ok(None) => {
-                        return Err(de::Error::invalid_length(1, &self));
-                    }
-                }
-            }
-            (MethodFunction::QueryChanges, MethodObject::ContactCard) => match seq.next_element() {
-                Ok(Some(value)) => {
-                    RequestMethod::QueryChanges(QueryChangesRequestMethod::ContactCard(value))
-                }
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::QueryChanges, MethodObject::FileNode) => match seq.next_element() {
-                Ok(Some(value)) => {
-                    RequestMethod::QueryChanges(QueryChangesRequestMethod::FileNode(value))
-                }
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
             (MethodFunction::QueryChanges, MethodObject::ShareNotification) => {
                 match seq.next_element() {
                     Ok(Some(value)) => RequestMethod::QueryChanges(
@@ -1125,27 +934,6 @@ impl<'de> Visitor<'de> for CallVisitor {
             },
             (MethodFunction::Copy, MethodObject::Blob) => match seq.next_element() {
                 Ok(Some(value)) => RequestMethod::Copy(CopyRequestMethod::Blob(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Copy, MethodObject::CalendarEvent) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Copy(CopyRequestMethod::CalendarEvent(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Copy, MethodObject::ContactCard) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Copy(CopyRequestMethod::ContactCard(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Copy, MethodObject::FileNode) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Copy(CopyRequestMethod::FileNode(value)),
                 Err(err) => RequestMethod::invalid(err),
                 Ok(None) => {
                     return Err(de::Error::invalid_length(1, &self));
@@ -1179,31 +967,6 @@ impl<'de> Visitor<'de> for CallVisitor {
                     return Err(de::Error::invalid_length(1, &self));
                 }
             },
-            (MethodFunction::Parse, MethodObject::CalendarEvent) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Parse(ParseRequestMethod::CalendarEvent(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::Parse, MethodObject::ContactCard) => match seq.next_element() {
-                Ok(Some(value)) => RequestMethod::Parse(ParseRequestMethod::ContactCard(value)),
-                Err(err) => RequestMethod::invalid(err),
-                Ok(None) => {
-                    return Err(de::Error::invalid_length(1, &self));
-                }
-            },
-            (MethodFunction::GetAvailability, MethodObject::Principal) => {
-                match seq.next_element() {
-                    Ok(Some(value)) => {
-                        RequestMethod::Get(GetRequestMethod::PrincipalAvailability(value))
-                    }
-                    Err(err) => RequestMethod::invalid(err),
-                    Ok(None) => {
-                        return Err(de::Error::invalid_length(1, &self));
-                    }
-                }
-            }
             (MethodFunction::Validate, MethodObject::SieveScript) => match seq.next_element() {
                 Ok(Some(value)) => RequestMethod::ValidateScript(value),
                 Err(err) => RequestMethod::invalid(err),

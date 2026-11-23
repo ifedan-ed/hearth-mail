@@ -211,14 +211,10 @@ impl RegistrySet for Server {
             destroy,
         };
         let result = match object_type {
-            ObjectType::AddressBook
-            | ObjectType::Asn
+            ObjectType::Asn
             | ObjectType::Authentication
             | ObjectType::BlobStore
             | ObjectType::Cache
-            | ObjectType::Calendar
-            | ObjectType::CalendarAlarm
-            | ObjectType::CalendarScheduling
             | ObjectType::Coordinator
             | ObjectType::DataRetention
             | ObjectType::DataStore
@@ -227,7 +223,6 @@ impl RegistrySet for Server {
             | ObjectType::DnsResolver
             | ObjectType::Email
             | ObjectType::Enterprise
-            | ObjectType::FileStorage
             | ObjectType::Http
             | ObjectType::HttpForm
             | ObjectType::Imap
@@ -266,7 +261,6 @@ impl RegistrySet for Server {
             | ObjectType::TaskManager
             | ObjectType::TlsReportSettings
             | ObjectType::TracingStore
-            | ObjectType::WebDav
             | ObjectType::DsnReportSettings
             | ObjectType::AcmeProvider
             | ObjectType::AiModel

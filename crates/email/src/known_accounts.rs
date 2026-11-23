@@ -11,13 +11,12 @@
 
 use crate::cache::MessageCacheFetch;
 use common::{Server, auth::AccessToken, sharing::EffectiveAcl};
-use groupware::cache::GroupwareCache;
 use std::future::Future;
 use store::roaring::RoaringBitmap;
 use trc::AddContext;
 use types::{
     acl::{Acl, AclGrant},
-    collection::{Collection, SyncCollection},
+    collection::Collection,
 };
 
 pub trait KnownAccounts: Sync + Send {
@@ -40,27 +39,6 @@ impl KnownAccounts for Server {
                 known.extend(grants.iter().map(|grant| grant.account_id));
             }
         };
-
-        for (collection, sync_collection) in [
-            (Collection::Calendar, SyncCollection::Calendar),
-            (Collection::AddressBook, SyncCollection::AddressBook),
-            (Collection::FileNode, SyncCollection::FileNode),
-        ] {
-            let account_ids = access_token
-                .all_ids_by_collection(collection)
-                .collect::<RoaringBitmap>();
-            for account_id in account_ids {
-                let resources = self
-                    .fetch_dav_resources(access_token.account_id(), account_id, sync_collection)
-                    .await
-                    .caused_by(trc::location!())?;
-                for resource in &resources.resources {
-                    if let Some(grants) = resource.acls() {
-                        add(account_id, grants);
-                    }
-                }
-            }
-        }
 
         let account_ids = access_token
             .all_ids_by_collection(Collection::Mailbox)

@@ -71,9 +71,7 @@ impl CacheInvalidationBuilder {
                     self.invalidate(CacheInvalidation::AccessToken(id));
                 }
 
-                if was_renamed {
-                    self.invalidate(CacheInvalidation::DavResources(id));
-                }
+                if was_renamed {}
             }
 
             (
@@ -107,9 +105,7 @@ impl CacheInvalidationBuilder {
                     self.invalidate(CacheInvalidation::AccessToken(id));
                 }
 
-                if was_renamed {
-                    self.invalidate(CacheInvalidation::DavResources(id));
-                }
+                if was_renamed {}
             }
 
             (ObjectInner::Domain(current), ObjectInner::Domain(new)) => {
@@ -198,7 +194,6 @@ impl CacheInvalidationBuilder {
             ObjectInner::Account(_) => {
                 self.invalidate(CacheInvalidation::AccessToken(id));
                 self.invalidate(CacheInvalidation::Account(id));
-                self.invalidate(CacheInvalidation::DavResources(id));
             }
             ObjectInner::Domain(_) => {
                 self.invalidate(CacheInvalidation::Domain(id));
@@ -347,10 +342,6 @@ impl Server {
         self.inner.cache.domain_names.clear();
         self.inner.cache.emails.clear();
         self.inner.cache.tenants.clear();
-        self.inner.cache.files.clear();
-        self.inner.cache.contacts.clear();
-        self.inner.cache.events.clear();
-        self.inner.cache.scheduling.clear();
         self.inner.cache.dkim_signers.clear();
         self.inner.cache.accounts.clear();
         self.inner.cache.roles.clear();
@@ -384,12 +375,6 @@ impl Server {
                 CacheInvalidation::AccessToken(id) => {
                     cache.access_tokens.remove(id);
                     cache.http_auth.inner().retain(|_, v| v.account_id != *id);
-                }
-                CacheInvalidation::DavResources(id) => {
-                    cache.files.remove(id);
-                    cache.contacts.remove(id);
-                    cache.events.remove(id);
-                    cache.scheduling.remove(id);
                 }
                 CacheInvalidation::Domain(id) => {
                     cache.domains.remove(id);

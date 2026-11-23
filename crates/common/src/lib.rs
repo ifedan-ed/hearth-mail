@@ -31,11 +31,10 @@ use crate::{
 use ahash::{AHashMap, AHashSet};
 use arc_swap::ArcSwap;
 use auth::oauth::config::OAuthConfig;
-use calcard::common::timezone::Tz;
 use config::{
-    groupware::GroupwareConfig,
     mailstore::jmap::JmapConfig,
     network::Network,
+    sharing::SharingConfig,
     smtp::{
         SmtpConfig,
         resolver::{Policy, Tlsa},
@@ -142,7 +141,6 @@ pub const KV_QUOTA_BLOB: u8 = 11;
 pub const KV_GREYLIST: u8 = 16;
 pub const KV_LOCK_QUEUE_MESSAGE: u8 = 21;
 pub const KV_LOCK_TASK: u8 = 23;
-pub const KV_LOCK_DAV: u8 = 25;
 pub const KV_SIEVE_ID: u8 = 26;
 // inbuxa: far above upstream's prefixes, so a new one of theirs never collides
 pub const KV_PORT_REACHABILITY: u8 = 200;
@@ -225,10 +223,6 @@ pub struct Caches {
     pub http_auth: Cache<Box<str>, HttpAuthCache>,
 
     pub messages: Cache<u32, Arc<MessageStoreCache>>,
-    pub files: Cache<u32, Arc<DavResources>>,
-    pub contacts: Cache<u32, Arc<DavResources>>,
-    pub events: Cache<u32, Arc<DavResources>>,
-    pub scheduling: Cache<u32, Arc<DavResources>>,
 
     pub emails: Cache<EmailAddress, EmailCache>,
     pub emails_negative: CacheWithTtl<EmailAddress, ()>,
@@ -349,95 +343,12 @@ pub struct TlsConnectors {
 
 pub struct NameWrapper(pub String);
 
-#[derive(Debug, Clone)]
-pub struct DavResources {
-    pub base_path: String,
-    pub paths: AHashSet<DavPath>,
-    pub resources: Vec<DavResource>,
-    pub item_change_id: u64,
-    pub container_change_id: u64,
-    pub highest_change_id: u64,
-    pub size: u64,
-    pub update_lock: Arc<UpdateLock>,
-}
-
+/// Serialises writers of one account's cached state (the mail cache) and
+/// carries the revision the cache was built at.
 #[derive(Debug)]
 pub struct UpdateLock {
     pub semaphore: Semaphore,
     pub revision: AtomicU64,
-}
-
-#[derive(Debug, Clone)]
-pub struct DavPath {
-    pub path: String,
-    pub parent_id: Option<u32>,
-    pub hierarchy_seq: u32,
-    pub resource_idx: usize,
-}
-
-#[derive(Debug, Clone)]
-pub struct DavResource {
-    pub document_id: u32,
-    pub data: DavResourceMetadata,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct DavResourcePath<'x> {
-    pub path: &'x DavPath,
-    pub resource: &'x DavResource,
-}
-
-#[derive(Debug, Clone)]
-pub enum DavResourceMetadata {
-    File {
-        name: String,
-        size: Option<u32>,
-        parent_id: Option<u32>,
-        acls: TinyVec<[AclGrant; 2]>,
-    },
-    Calendar {
-        name: String,
-        acls: TinyVec<[AclGrant; 2]>,
-        preferences: TinyVec<[TinyCalendarPreferences; 2]>,
-    },
-    CalendarEvent {
-        names: TinyVec<[DavName; 2]>,
-        start: i64,
-        duration: u32,
-        // inbuxa: EVENT_VIEW_* flags
-        view: u8,
-    },
-    CalendarEventNotification {
-        names: TinyVec<[DavName; 2]>,
-    },
-    AddressBook {
-        name: String,
-        acls: TinyVec<[AclGrant; 2]>,
-    },
-    ContactCard {
-        names: TinyVec<[DavName; 2]>,
-    },
-}
-
-// inbuxa: what a sharee may see of a calendar event: the time only of a
-// private or confidential one, and not the attendees of one that hides them
-pub const EVENT_VIEW_PRIVATE: u8 = 1;
-pub const EVENT_VIEW_HIDE_ATTENDEES: u8 = 1 << 1;
-
-#[derive(Debug, Clone, Default)]
-pub struct TinyCalendarPreferences {
-    pub account_id: u32,
-    pub tz: Tz,
-    pub flags: u16,
-}
-
-#[derive(
-    rkyv::Archive, rkyv::Deserialize, rkyv::Serialize, Debug, Default, Clone, PartialEq, Eq,
-)]
-#[rkyv(derive(Debug))]
-pub struct DavName {
-    pub name: String,
-    pub parent_id: u32,
 }
 
 #[derive(Clone)]
@@ -451,7 +362,7 @@ pub struct Core {
     pub imap: ImapConfig,
     pub smtp: SmtpConfig,
     pub spam: SpamFilterConfig,
-    pub groupware: GroupwareConfig,
+    pub sharing: SharingConfig,
     pub metrics: Metrics,
 }
 
@@ -491,11 +402,3 @@ pub struct ThrottleKeyHasher {
 
 #[derive(Clone, Default)]
 pub struct ThrottleKeyHasherBuilder {}
-
-/// The logo embedded in calendar emails when no custom logo is set: INBUXA's
-/// compact lockup at 380x80, twice its 180-pixel display width. Base64 with
-/// CRLF line breaks, ready for a base64 MIME part.
-pub const DEFAULT_LOGO_BASE64: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../resources/branding/email-logo.png.b64"
-));

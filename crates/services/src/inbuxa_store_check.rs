@@ -204,10 +204,7 @@ enum Found {
 fn object_name(collection: u8) -> String {
     match Collection::from(collection) {
         Collection::Email => "email".into(),
-        Collection::FileNode => "file".into(),
         Collection::SieveScript => "sieveScript".into(),
-        Collection::CalendarEvent => "calendarEvent".into(),
-        Collection::ContactCard => "contactCard".into(),
         _ => format!("collection{collection}"),
     }
 }
@@ -578,7 +575,6 @@ mod tests {
     #[test]
     fn objects_are_named_by_collection() {
         assert_eq!(object_name(Collection::Email.into()), "email");
-        assert_eq!(object_name(Collection::FileNode.into()), "file");
         assert_eq!(object_name(Collection::SieveScript.into()), "sieveScript");
         assert_eq!(object_name(Collection::Mailbox.into()), "collection1");
     }

@@ -14,29 +14,6 @@ pub struct Field(u8);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
-pub enum ContactField {
-    Uid,
-    Email,
-    Archive,
-    CreatedToUpdated,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(u8)]
-pub enum CalendarEventField {
-    Uid,
-    Archive,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(u8)]
-pub enum CalendarNotificationField {
-    CreatedToId,
-    Archive,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(u8)]
 pub enum EmailField {
     Archive,
     Metadata,
@@ -77,41 +54,9 @@ pub enum IdentityField {
 #[repr(u8)]
 pub enum PrincipalField {
     Archive = ARCHIVE_FIELD,
-    ParticipantIdentities = 45,
     IdentityAddresses = 110,
-    DefaultCalendarId = 47,
-    DefaultAddressBookId = 48,
     ActiveScriptId = 49,
     PushSubscriptions = 44,
-}
-
-impl From<ContactField> for u8 {
-    fn from(value: ContactField) -> Self {
-        match value {
-            ContactField::Uid => 0,
-            ContactField::Email => 1,
-            ContactField::CreatedToUpdated => 2,
-            ContactField::Archive => ARCHIVE_FIELD,
-        }
-    }
-}
-
-impl From<CalendarEventField> for u8 {
-    fn from(value: CalendarEventField) -> Self {
-        match value {
-            CalendarEventField::Uid => 0,
-            CalendarEventField::Archive => ARCHIVE_FIELD,
-        }
-    }
-}
-
-impl From<CalendarNotificationField> for u8 {
-    fn from(value: CalendarNotificationField) -> Self {
-        match value {
-            CalendarNotificationField::CreatedToId => 0,
-            CalendarNotificationField::Archive => ARCHIVE_FIELD,
-        }
-    }
 }
 
 impl From<EmailField> for u8 {
@@ -156,10 +101,7 @@ impl From<EmailSubmissionField> for u8 {
 impl From<PrincipalField> for u8 {
     fn from(value: PrincipalField) -> Self {
         match value {
-            PrincipalField::ParticipantIdentities => 45,
             PrincipalField::IdentityAddresses => 110,
-            PrincipalField::DefaultCalendarId => 47,
-            PrincipalField::DefaultAddressBookId => 48,
             PrincipalField::ActiveScriptId => 49,
             PrincipalField::PushSubscriptions => 44,
             PrincipalField::Archive => ARCHIVE_FIELD,
@@ -179,24 +121,6 @@ impl From<IdentityField> for u8 {
 impl From<Field> for u8 {
     fn from(value: Field) -> Self {
         value.0
-    }
-}
-
-impl From<ContactField> for Field {
-    fn from(value: ContactField) -> Self {
-        Field(u8::from(value))
-    }
-}
-
-impl From<CalendarEventField> for Field {
-    fn from(value: CalendarEventField) -> Self {
-        Field(u8::from(value))
-    }
-}
-
-impl From<CalendarNotificationField> for Field {
-    fn from(value: CalendarNotificationField) -> Self {
-        Field(u8::from(value))
     }
 }
 
@@ -249,9 +173,6 @@ impl Field {
 }
 
 impl FieldType for Field {}
-impl FieldType for ContactField {}
-impl FieldType for CalendarEventField {}
-impl FieldType for CalendarNotificationField {}
 impl FieldType for EmailField {}
 impl FieldType for MailboxField {}
 impl FieldType for PrincipalField {}

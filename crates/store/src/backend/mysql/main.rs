@@ -9,10 +9,7 @@
 use super::{MysqlStore, bounded, into_error};
 use crate::{
     backend::mysql::MysqlSearchField,
-    search::{
-        CalendarSearchField, ContactSearchField, EmailSearchField, SearchableField,
-        TracingSearchField,
-    },
+    search::{EmailSearchField, SearchableField, TracingSearchField},
     *,
 };
 use ::registry::schema::structs;
@@ -218,8 +215,6 @@ impl MysqlStore {
         let limit = self.timeouts.maintenance;
         let result = tokio::time::timeout(limit, async {
             create_search_tables::<EmailSearchField>(&mut conn).await?;
-            create_search_tables::<CalendarSearchField>(&mut conn).await?;
-            create_search_tables::<ContactSearchField>(&mut conn).await?;
             //create_search_tables::<FileSearchField>(&mut conn).await?;
             create_search_tables::<TracingSearchField>(&mut conn).await?;
 

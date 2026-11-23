@@ -22,7 +22,6 @@ pub mod archive;
 pub mod blob;
 pub mod blob_cache; // inbuxa: per-node message blob cache
 pub mod branding; // inbuxa: branding BT-1, BT-2
-pub mod dav;
 pub mod document;
 pub mod encryption;
 pub mod index;
@@ -98,28 +97,5 @@ impl Server {
 
     pub async fn total_domains(&self) -> trc::Result<usize> {
         self.registry().count_object(ObjectType::Domain).await
-    }
-
-    // inbuxa: BT-9: the first logo mail can carry inline; none leaves the
-    // built-in INBUXA logo. Email is always light (BT-27)
-    pub async fn logo_resource(
-        &self,
-        domain: &str,
-    ) -> trc::Result<Option<crate::manager::application::Resource<Vec<u8>>>> {
-        Ok(self
-            .logos_for(domain, false)
-            .await?
-            .into_iter()
-            .find(|logo| logo.is_embeddable())
-            .and_then(|logo| match logo {
-                inbuxa_features::branding::logo::Logo::Image {
-                    content_type,
-                    bytes,
-                } => Some(crate::manager::application::Resource::new(
-                    content_type,
-                    bytes,
-                )),
-                inbuxa_features::branding::logo::Logo::Url(_) => None,
-            }))
     }
 }

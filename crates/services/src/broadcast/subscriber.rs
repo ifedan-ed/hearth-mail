@@ -155,7 +155,6 @@ pub fn spawn_broadcast_subscriber(inner: Arc<Inner>, mut shutdown_rx: watch::Rec
                                                             .storage
                                                             .data
                                                             .note_change(push.account_id, push.change_id),
-                                                        _ => {}
                                                     }
                                                     if inner
                                                         .ipc
@@ -320,14 +319,6 @@ fn log_event(event: &BroadcastEvent) -> trc::Value {
                 state_change.account_id.into(),
                 state_change.change_id.into(),
                 (*state_change.types.as_ref()).into(),
-            ]),
-            PushNotification::CalendarAlert(calendar_alert) => trc::Value::Array(vec![
-                "CalendarAlert".into(),
-                calendar_alert.account_id.into(),
-                calendar_alert.event_id.into(),
-                calendar_alert.recurrence_id.into(),
-                calendar_alert.uid.clone().into(),
-                calendar_alert.alert_id.clone().into(),
             ]),
             PushNotification::EmailPush(email_push) => trc::Value::Array(vec![
                 "EmailPush".into(),

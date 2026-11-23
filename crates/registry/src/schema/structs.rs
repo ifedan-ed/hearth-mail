@@ -83,23 +83,6 @@ pub enum Action {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
-pub struct AddressBook {
-    #[serde(rename = "defaultDisplayName")]
-    pub default_display_name: Option<String>,
-    #[serde(rename = "defaultHrefName")]
-    pub default_href_name: Option<String>,
-    #[serde(rename = "maxVCardSize")]
-    pub max_v_card_size: u64,
-    #[serde(rename = "maxAddressBooks")]
-    pub max_address_books: Option<u64>,
-    #[serde(rename = "maxContacts")]
-    pub max_contacts: Option<u64>,
-    #[serde(rename = "vCardVersion")]
-    pub v_card_version: VCardVersion,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct AiModel {
     #[serde(rename = "name")]
     pub name: String,
@@ -238,42 +221,6 @@ pub struct Application {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
-pub struct ArchivedCalendarEvent {
-    #[serde(rename = "title")]
-    pub title: String,
-    #[serde(rename = "startTime")]
-    pub start_time: Option<UTCDateTime>,
-    #[serde(rename = "createdAt")]
-    pub created_at: UTCDateTime,
-    #[serde(rename = "accountId")]
-    pub account_id: Id,
-    #[serde(rename = "archivedAt")]
-    pub archived_at: UTCDateTime,
-    #[serde(rename = "archivedUntil")]
-    pub archived_until: UTCDateTime,
-    #[serde(rename = "blobId")]
-    pub blob_id: BlobId,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct ArchivedContactCard {
-    #[serde(rename = "name")]
-    pub name: Option<String>,
-    #[serde(rename = "createdAt")]
-    pub created_at: UTCDateTime,
-    #[serde(rename = "accountId")]
-    pub account_id: Id,
-    #[serde(rename = "archivedAt")]
-    pub archived_at: UTCDateTime,
-    #[serde(rename = "archivedUntil")]
-    pub archived_until: UTCDateTime,
-    #[serde(rename = "blobId")]
-    pub blob_id: BlobId,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct ArchivedEmail {
     #[serde(rename = "from")]
     pub from: String,
@@ -294,29 +241,9 @@ pub struct ArchivedEmail {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct ArchivedFileNode {
-    #[serde(rename = "name")]
-    pub name: String,
-    #[serde(rename = "createdAt")]
-    pub created_at: UTCDateTime,
-    #[serde(rename = "accountId")]
-    pub account_id: Id,
-    #[serde(rename = "archivedAt")]
-    pub archived_at: UTCDateTime,
-    #[serde(rename = "archivedUntil")]
-    pub archived_until: UTCDateTime,
-    #[serde(rename = "blobId")]
-    pub blob_id: BlobId,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "@type")]
 pub enum ArchivedItem {
     Email(ArchivedEmail),
-    FileNode(ArchivedFileNode),
-    CalendarEvent(ArchivedCalendarEvent),
-    ContactCard(ArchivedContactCard),
     SieveScript(ArchivedSieveScript),
 }
 
@@ -635,69 +562,6 @@ pub struct Cache {
     pub dkim_signatures: u64,
     #[serde(rename = "negativeTtl")]
     pub negative_ttl: Duration,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct Calendar {
-    #[serde(rename = "defaultDisplayName")]
-    pub default_display_name: Option<String>,
-    #[serde(rename = "defaultHrefName")]
-    pub default_href_name: Option<String>,
-    #[serde(rename = "maxAttendees")]
-    pub max_attendees: u64,
-    #[serde(rename = "maxRecurrenceExpansions")]
-    pub max_recurrence_expansions: u64,
-    #[serde(rename = "maxICalendarSize")]
-    pub max_i_calendar_size: u64,
-    #[serde(rename = "maxCalendars")]
-    pub max_calendars: Option<u64>,
-    #[serde(rename = "maxEvents")]
-    pub max_events: Option<u64>,
-    #[serde(rename = "maxParticipantIdentities")]
-    pub max_participant_identities: Option<u64>,
-    #[serde(rename = "maxEventNotifications")]
-    pub max_event_notifications: Option<u64>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct CalendarAlarm {
-    #[serde(rename = "allowExternalRcpts")]
-    pub allow_external_rcpts: bool,
-    #[serde(rename = "enable")]
-    pub enable: bool,
-    #[serde(rename = "fromEmail")]
-    pub from_email: Option<String>,
-    #[serde(rename = "fromName")]
-    pub from_name: String,
-    #[serde(rename = "minTriggerInterval")]
-    pub min_trigger_interval: Duration,
-    #[serde(rename = "template")]
-    pub template: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct CalendarScheduling {
-    #[serde(rename = "enable")]
-    pub enable: bool,
-    #[serde(rename = "httpRsvpEnable")]
-    pub http_rsvp_enable: bool,
-    #[serde(rename = "httpRsvpLinkExpiry")]
-    pub http_rsvp_link_expiry: Duration,
-    #[serde(rename = "httpRsvpUrl")]
-    pub http_rsvp_url: Option<String>,
-    #[serde(rename = "autoAddInvitations")]
-    pub auto_add_invitations: bool,
-    #[serde(rename = "itipMaxSize")]
-    pub itip_max_size: u64,
-    #[serde(rename = "maxRecipients")]
-    pub max_recipients: u64,
-    #[serde(rename = "emailTemplate")]
-    pub email_template: Option<String>,
-    #[serde(rename = "httpRsvpTemplate")]
-    pub http_rsvp_template: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -2932,17 +2796,6 @@ pub struct ExpressionMatch {
     pub if_: String,
     #[serde(rename = "then")]
     pub then: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct FileStorage {
-    #[serde(rename = "maxSize")]
-    pub max_size: u64,
-    #[serde(rename = "maxFiles")]
-    pub max_files: Option<u64>,
-    #[serde(rename = "maxFolders")]
-    pub max_folders: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -5572,9 +5425,6 @@ pub enum Task {
     IndexDocument(TaskIndexDocument),
     UnindexDocument(TaskIndexDocument),
     IndexTrace(TaskIndexTrace),
-    CalendarAlarmEmail(TaskCalendarAlarmEmail),
-    CalendarAlarmNotification(TaskCalendarAlarmNotification),
-    CalendarItipMessage(TaskCalendarItipMessage),
     MergeThreads(TaskMergeThreads),
     DmarcReport(TaskDmarcReport),
     TlsReport(TaskTlsReport),
@@ -5596,74 +5446,6 @@ pub struct TaskAccountMaintenance {
     pub account_id: Id,
     #[serde(rename = "maintenanceType")]
     pub maintenance_type: TaskAccountMaintenanceType,
-    #[serde(rename = "status")]
-    pub status: TaskStatus,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct TaskCalendarAlarmEmail {
-    #[serde(rename = "alarmId")]
-    pub alarm_id: u64,
-    #[serde(rename = "eventId")]
-    pub event_id: u64,
-    #[serde(rename = "eventStart")]
-    pub event_start: UTCDateTime,
-    #[serde(rename = "eventEnd")]
-    pub event_end: UTCDateTime,
-    #[serde(rename = "eventStartTz")]
-    pub event_start_tz: u64,
-    #[serde(rename = "eventEndTz")]
-    pub event_end_tz: u64,
-    #[serde(rename = "accountId")]
-    pub account_id: Id,
-    #[serde(rename = "documentId")]
-    pub document_id: Id,
-    #[serde(rename = "status")]
-    pub status: TaskStatus,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct TaskCalendarAlarmNotification {
-    #[serde(rename = "alarmId")]
-    pub alarm_id: u64,
-    #[serde(rename = "eventId")]
-    pub event_id: u64,
-    #[serde(rename = "recurrenceId")]
-    pub recurrence_id: Option<i64>,
-    #[serde(rename = "accountId")]
-    pub account_id: Id,
-    #[serde(rename = "documentId")]
-    pub document_id: Id,
-    #[serde(rename = "status")]
-    pub status: TaskStatus,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct TaskCalendarItipContents {
-    #[serde(rename = "from")]
-    pub from: String,
-    #[serde(rename = "to")]
-    pub to: Map<String>,
-    #[serde(rename = "isFromOrganizer")]
-    pub is_from_organizer: bool,
-    #[serde(rename = "iCalendarData")]
-    pub i_calendar_data: String,
-    #[serde(rename = "summary")]
-    pub summary: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct TaskCalendarItipMessage {
-    #[serde(rename = "messages")]
-    pub messages: List<TaskCalendarItipContents>,
-    #[serde(rename = "accountId")]
-    pub account_id: Id,
-    #[serde(rename = "documentId")]
-    pub document_id: Id,
     #[serde(rename = "status")]
     pub status: TaskStatus,
 }
@@ -6324,25 +6106,6 @@ pub enum UserRoles {
     User,
     Admin,
     Custom(CustomRoles),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct WebDav {
-    #[serde(rename = "enableAssistedDiscovery")]
-    pub enable_assisted_discovery: bool,
-    #[serde(rename = "maxLockTimeout")]
-    pub max_lock_timeout: Duration,
-    #[serde(rename = "maxLocks")]
-    pub max_locks: u64,
-    #[serde(rename = "deadPropertyMaxSize")]
-    pub dead_property_max_size: Option<u64>,
-    #[serde(rename = "livePropertyMaxSize")]
-    pub live_property_max_size: u64,
-    #[serde(rename = "requestMaxSize")]
-    pub request_max_size: u64,
-    #[serde(rename = "maxResults")]
-    pub max_results: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

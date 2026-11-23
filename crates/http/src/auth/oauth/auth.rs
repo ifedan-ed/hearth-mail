@@ -681,12 +681,6 @@ fn is_known_resource<'x>(hostnames: impl IntoIterator<Item = &'x str>, uri: &str
         b"imaps" => true,
         b"pop3" => true,
         b"pop3s" => true,
-        b"caldav" => true,
-        b"caldavs" => true,
-        b"webdav" => true,
-        b"webdavs" => true,
-        b"carddav" => true,
-        b"carddavs" => true,
         b"sieve" => true,
         b"sieves" => true
     )

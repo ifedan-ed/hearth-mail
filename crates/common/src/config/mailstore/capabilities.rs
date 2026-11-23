@@ -6,19 +6,16 @@
 
 use crate::config::mailstore::jmap::JmapConfig;
 use ahash::AHashSet;
-use calcard::icalendar::ICalendarDuration;
 use jmap_proto::{
-    object::{email::EmailComparator, file_node::FileNodeComparator},
+    object::email::EmailComparator,
     request::capability::{
-        BlobCapabilities, CalendarCapabilities, Capabilities, Capability, ContactsCapabilities,
-        CoreCapabilities, EmptyCapabilities, FileNodeCapabilities, MailCapabilities,
-        PrincipalAvailabilityCapabilities, PrincipalCapabilities, SieveAccountCapabilities,
+        BlobCapabilities, Capabilities, Capability, CoreCapabilities, EmptyCapabilities,
+        MailCapabilities, PrincipalCapabilities, SieveAccountCapabilities,
         SieveSessionCapabilities, SubmissionCapabilities, WebPushCapabilities,
     },
-    types::date::UTCDate,
 };
 use registry::{
-    schema::structs::{Calendar, Email, SieveUserInterpreter},
+    schema::structs::{Email, SieveUserInterpreter},
     types::EnumImpl,
 };
 use store::registry::bootstrap::Bootstrap;
@@ -74,112 +71,6 @@ impl JmapConfig {
             }),
         );
 
-        // Add calendar capabilities
-        self.capabilities.session.append(
-            Capability::Calendars,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-        self.capabilities.account.insert(
-            Capability::Calendars,
-            Capabilities::Calendar(CalendarCapabilities {
-                max_calendars_per_event: None,
-                min_date_time: UTCDate {
-                    year: 1,
-                    month: 1,
-                    day: 1,
-                    hour: 0,
-                    minute: 0,
-                    second: 0,
-                    tz_before_gmt: false,
-                    tz_hour: 0,
-                    tz_minute: 0,
-                },
-                max_date_time: UTCDate {
-                    year: 9999,
-                    month: 12,
-                    day: 31,
-                    hour: 23,
-                    minute: 59,
-                    second: 59,
-                    tz_before_gmt: false,
-                    tz_hour: 0,
-                    tz_minute: 0,
-                },
-                max_expanded_query_duration: ICalendarDuration::from_seconds(86400 * 365)
-                    .to_string(),
-                max_participants_per_event: bp
-                    .setting_infallible::<Calendar>()
-                    .await
-                    .max_attendees
-                    .into(),
-                may_create_calendar: true,
-            }),
-        );
-
-        self.capabilities.session.append(
-            Capability::CalendarsParse,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-        self.capabilities.account.insert(
-            Capability::CalendarsParse,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-
-        // Add contacts capabilities
-        self.capabilities.session.append(
-            Capability::Contacts,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-        self.capabilities.account.insert(
-            Capability::Contacts,
-            Capabilities::Contacts(ContactsCapabilities {
-                max_address_books_per_card: None,
-                may_create_address_book: true,
-            }),
-        );
-        self.capabilities.session.append(
-            Capability::ContactsParse,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-        self.capabilities.account.insert(
-            Capability::ContactsParse,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-
-        // Add file node capabilities
-        self.capabilities.session.append(
-            Capability::FileNode,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-        self.capabilities.account.insert(
-            Capability::FileNode,
-            Capabilities::FileNode(FileNodeCapabilities {
-                max_file_node_depth: None,
-                max_size_file_node_name: 255,
-                forbidden_name_chars: Some("/<>:\"\\|?*".to_string()),
-                forbidden_node_names: Some(
-                    [
-                        ".", "..", "CON", "PRN", "AUX", "NUL", "COM0", "COM1", "COM2", "COM3",
-                        "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT0", "LPT1", "LPT2",
-                        "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
-                    ]
-                    .into_iter()
-                    .map(str::to_string)
-                    .collect(),
-                ),
-                file_node_query_sort_options: vec![
-                    FileNodeComparator::Name,
-                    FileNodeComparator::Size,
-                    FileNodeComparator::NodeType,
-                ],
-                may_create_top_level_file_node: true,
-                case_insensitive_names: false,
-                web_trash_url: None,
-                web_url_template: None,
-                web_write_url_template: None,
-            }),
-        );
-
         // Add principal capabilities
         self.capabilities.session.append(
             Capability::Principals,
@@ -189,16 +80,6 @@ impl JmapConfig {
             Capability::Principals,
             Capabilities::Principals(PrincipalCapabilities {
                 current_user_principal_id: None,
-            }),
-        );
-        self.capabilities.session.append(
-            Capability::PrincipalsAvailability,
-            Capabilities::Empty(EmptyCapabilities::default()),
-        );
-        self.capabilities.account.insert(
-            Capability::PrincipalsAvailability,
-            Capabilities::PrincipalsAvailability(PrincipalAvailabilityCapabilities {
-                max_availability_duration: ICalendarDuration::from_seconds(86400 * 365).to_string(),
             }),
         );
 

@@ -84,9 +84,9 @@ pub struct Http {
     /// `forwarded`.
     pub forwarded_header: ForwardedHeader,
     pub redirect_root: Option<String>,
-    /// inbuxa: HTTP Basic accepted on every endpoint, not only DAV (contract
-    /// C-23). True in bootstrap and recovery mode, or with
-    /// `INBUXA_HTTP_BASIC_AUTH=all`.
+    /// inbuxa: HTTP Basic accepted on JMAP, the API and the user OAuth
+    /// endpoints too, which otherwise take a token only (contract C-23). True
+    /// in bootstrap and recovery mode, or with `INBUXA_HTTP_BASIC_AUTH=all`.
     pub basic_auth_everywhere: bool,
 }
 
@@ -237,24 +237,6 @@ impl Network {
                     }
                     pacc.protocols.jmap = HttpServer {
                         url: format!("https://{hostname}/jmap/session",),
-                    }
-                    .into();
-                }
-                ServiceProtocol::Caldav => {
-                    pacc.protocols.caldav = HttpServer {
-                        url: format!("https://{hostname}/dav/cal/",),
-                    }
-                    .into();
-                }
-                ServiceProtocol::Carddav => {
-                    pacc.protocols.carddav = HttpServer {
-                        url: format!("https://{hostname}/dav/card/",),
-                    }
-                    .into();
-                }
-                ServiceProtocol::Webdav => {
-                    pacc.protocols.webdav = HttpServer {
-                        url: format!("https://{hostname}/dav/file/",),
                     }
                     .into();
                 }
@@ -472,8 +454,8 @@ impl Http {
                 .collect()
         };
 
-        // inbuxa: outside DAV, HTTP sign-in is a token unless the operator
-        // says otherwise (contract C-23). The integration suites sign in with
+        // inbuxa: JMAP and API sign-in is a token unless the operator says
+        // otherwise (contract C-23). The integration suites sign in with
         // passwords over JMAP and the API, so test builds accept Basic
         // everywhere.
         #[cfg(feature = "test_mode")]
@@ -484,16 +466,12 @@ impl Http {
             || bp.registry.is_bootstrap_mode()
             || match types::branding::env_var("HTTP_BASIC_AUTH") {
                 Ok(value) if value.trim().eq_ignore_ascii_case("all") => true,
-                Ok(value)
-                    if value.trim().is_empty() || value.trim().eq_ignore_ascii_case("dav") =>
-                {
-                    false
-                }
+                Ok(value) if value.trim().is_empty() => false,
                 Ok(value) => {
                     bp.build_warning(
                         ObjectType::Http.singleton(),
                         format!(
-                            "INBUXA_HTTP_BASIC_AUTH is {value:?}; expected \"dav\" or \"all\". Basic authentication stays on DAV only."
+                            "INBUXA_HTTP_BASIC_AUTH is {value:?}; expected \"all\" or nothing. JMAP and the API take a token only."
                         ),
                     );
                     false

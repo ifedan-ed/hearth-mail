@@ -6,12 +6,10 @@
 
 //! Where HTTP Basic authentication is refused (contract C-23).
 //!
-//! Outside DAV, the HTTP endpoints take a token, never a password: JMAP, the
-//! management API, and the OAuth endpoints that authenticate a user
-//! (introspection, userinfo, authenticated client registration). CalDAV and
-//! CardDAV keep Basic, since that's how calendar and contacts apps sign in.
-//! The token endpoint's own client authentication isn't user sign-in and
-//! isn't affected.
+//! JMAP, the management API, and the OAuth endpoints that authenticate a
+//! user (introspection, userinfo, authenticated client registration) take a
+//! token, never a password. The token endpoint's own client authentication
+//! isn't user sign-in and isn't affected, nor are SCIM and the pages.
 //!
 //! Bootstrap and recovery mode accept Basic everywhere, as they keep
 //! permissive CORS (C-16), and `INBUXA_HTTP_BASIC_AUTH=all` puts it back
@@ -69,10 +67,6 @@ mod tests {
     #[test]
     fn basic_stays_where_apps_need_it() {
         for path in [
-            "/dav/cal/user/",
-            "/dav/card/user/",
-            "/.well-known/caldav",
-            "/.well-known/carddav",
             "/.well-known/jmap",
             "/auth/token",
             "/auth/device",

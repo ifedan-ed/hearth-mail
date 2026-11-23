@@ -19,7 +19,6 @@ pub mod http;
 pub mod map;
 pub mod public_ip; // inbuxa
 pub mod snowflake;
-pub mod template;
 pub mod tls;
 pub mod topological;
 pub mod url_params;

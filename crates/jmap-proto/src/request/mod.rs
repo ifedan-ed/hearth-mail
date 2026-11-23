@@ -16,7 +16,6 @@ pub mod websocket;
 use self::method::MethodName;
 use crate::{
     method::{
-        availability::GetAvailabilityRequest,
         changes::ChangesRequest,
         copy::{CopyBlobRequest, CopyRequest},
         get::GetRequest,
@@ -31,11 +30,8 @@ use crate::{
         validate::ValidateSieveScriptRequest,
     },
     object::{
-        AnyId, addressbook::AddressBook, blob::Blob, calendar::Calendar,
-        calendar_event::CalendarEvent, calendar_event_notification::CalendarEventNotification,
-        contact::ContactCard, email::Email, email_submission::EmailSubmission, file_node::FileNode,
-        identity::Identity, mailbox::Mailbox, participant_identity::ParticipantIdentity,
-        principal::Principal, push_subscription::PushSubscription, quota::Quota,
+        AnyId, blob::Blob, email::Email, email_submission::EmailSubmission, identity::Identity,
+        mailbox::Mailbox, principal::Principal, push_subscription::PushSubscription, quota::Quota,
         registry::Registry, share_notification::ShareNotification, sieve::Sieve, thread::Thread,
         vacation_response::VacationResponse,
     },
@@ -103,16 +99,8 @@ pub enum GetRequestMethod {
     Sieve(Box<GetRequest<Sieve>>),
     VacationResponse(Box<GetRequest<VacationResponse>>),
     Principal(Box<GetRequest<Principal>>),
-    PrincipalAvailability(Box<GetAvailabilityRequest>),
     Quota(Box<GetRequest<Quota>>),
     Blob(Box<GetRequest<Blob>>),
-    AddressBook(Box<GetRequest<AddressBook>>),
-    ContactCard(Box<GetRequest<ContactCard>>),
-    FileNode(Box<GetRequest<FileNode>>),
-    Calendar(Box<GetRequest<Calendar>>),
-    CalendarEvent(Box<GetRequest<CalendarEvent>>),
-    CalendarEventNotification(Box<GetRequest<CalendarEventNotification>>),
-    ParticipantIdentity(Box<GetRequest<ParticipantIdentity>>),
     ShareNotification(Box<GetRequest<ShareNotification>>),
     Registry(Box<GetRequest<Registry>>),
     MaskedEmail(Box<GetRequest<crate::object::fastmail_masked_email::FastmailMaskedEmail>>),
@@ -170,14 +158,7 @@ pub enum SetRequestMethod<'x> {
     PushSubscription(Box<SetRequest<'x, PushSubscription>>),
     Sieve(Box<SetRequest<'x, Sieve>>),
     VacationResponse(Box<SetRequest<'x, VacationResponse>>),
-    AddressBook(Box<SetRequest<'x, AddressBook>>),
-    ContactCard(Box<SetRequest<'x, ContactCard>>),
-    FileNode(Box<SetRequest<'x, FileNode>>),
     ShareNotification(Box<SetRequest<'x, ShareNotification>>),
-    Calendar(Box<SetRequest<'x, Calendar>>),
-    CalendarEvent(Box<SetRequest<'x, CalendarEvent>>),
-    CalendarEventNotification(Box<SetRequest<'x, CalendarEventNotification>>),
-    ParticipantIdentity(Box<SetRequest<'x, ParticipantIdentity>>),
     Registry(Box<SetRequest<'x, Registry>>),
     MaskedEmail(Box<SetRequest<'x, crate::object::fastmail_masked_email::FastmailMaskedEmail>>),
     DeletedAccount(Box<SetRequest<'x, crate::object::inbuxa_deleted_account::DeletedAccount>>),
@@ -236,9 +217,6 @@ pub enum SetRequestMethod<'x> {
 #[derive(Debug)]
 pub enum CopyRequestMethod<'x> {
     Email(Box<CopyRequest<'x, Email>>),
-    ContactCard(Box<CopyRequest<'x, ContactCard>>),
-    CalendarEvent(Box<CopyRequest<'x, CalendarEvent>>),
-    FileNode(Box<CopyRequest<'x, FileNode>>),
     Blob(Box<CopyBlobRequest>),
 }
 
@@ -250,12 +228,6 @@ pub enum QueryRequestMethod {
     Sieve(Box<QueryRequest<Sieve>>),
     Principal(Box<QueryRequest<Principal>>),
     Quota(Box<QueryRequest<Quota>>),
-    AddressBook(Box<QueryRequest<AddressBook>>),
-    ContactCard(Box<QueryRequest<ContactCard>>),
-    FileNode(Box<QueryRequest<FileNode>>),
-    Calendar(Box<QueryRequest<Calendar>>),
-    CalendarEvent(Box<QueryRequest<CalendarEvent>>),
-    CalendarEventNotification(Box<QueryRequest<CalendarEventNotification>>),
     ShareNotification(Box<QueryRequest<ShareNotification>>),
     Registry(Box<QueryRequest<Registry>>),
     AuditEvent(Box<QueryRequest<crate::object::inbuxa_audit::AuditEvent>>),
@@ -270,18 +242,12 @@ pub enum QueryChangesRequestMethod {
     EmailSubmission(Box<QueryChangesRequest<EmailSubmission>>),
     Principal(Box<QueryChangesRequest<Principal>>),
     Quota(Box<QueryChangesRequest<Quota>>),
-    ContactCard(Box<QueryChangesRequest<ContactCard>>),
-    FileNode(Box<QueryChangesRequest<FileNode>>),
-    CalendarEvent(Box<QueryChangesRequest<CalendarEvent>>),
-    CalendarEventNotification(Box<QueryChangesRequest<CalendarEventNotification>>),
     ShareNotification(Box<QueryChangesRequest<ShareNotification>>),
 }
 
 #[derive(Debug)]
 pub enum ParseRequestMethod {
     Email(Box<ParseRequest<Email>>),
-    ContactCard(Box<ParseRequest<ContactCard>>),
-    CalendarEvent(Box<ParseRequest<CalendarEvent>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

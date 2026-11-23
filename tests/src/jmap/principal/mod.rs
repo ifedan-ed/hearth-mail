@@ -6,6 +6,5 @@
  * Modified by Coffey Labs in 2026 for INBUXA.
  */
 
-pub mod availability;
 pub mod directory_off;
 pub mod get;

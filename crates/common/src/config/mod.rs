@@ -17,7 +17,6 @@ use crate::{
     },
 };
 use arc_swap::ArcSwap;
-use groupware::GroupwareConfig;
 use hyper::HeaderMap;
 use p256::elliptic_curve::sec1::ToEncodedPoint;
 use pkcs8::EncodePrivateKey;
@@ -27,14 +26,15 @@ use rsa::{
     pkcs8::DecodePrivateKey as _,
     traits::PublicKeyParts,
 };
+use sharing::SharingConfig;
 use store::registry::bootstrap::Bootstrap;
 use telemetry::Metrics;
 
-pub mod groupware;
 pub mod inner;
 pub mod mailstore;
 pub mod network;
 pub mod server;
+pub mod sharing;
 pub mod smtp;
 pub mod storage;
 pub mod telemetry;
@@ -51,7 +51,7 @@ impl Core {
             metrics: Metrics::parse(bp).await,
             spam: SpamFilterConfig::parse(bp).await,
             email: EmailConfig::parse(bp).await,
-            groupware: GroupwareConfig::parse(bp).await,
+            sharing: SharingConfig::parse(bp).await,
             storage,
         }
     }

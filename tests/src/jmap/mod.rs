@@ -12,19 +12,15 @@ use registry::{
         enums::{MtaProtocol, Permission},
         properties::Property,
         structs::{
-            CalendarAlarm, Expression, ExpressionMatch, Imap, Jmap, MtaExtensions,
-            MtaOutboundStrategy, MtaRoute, MtaRouteRelay, MtaStageAuth, Sharing,
+            Expression, ExpressionMatch, Imap, Jmap, MtaExtensions, MtaOutboundStrategy, MtaRoute,
+            MtaRouteRelay, MtaStageAuth, Sharing,
         },
     },
     types::list::List,
 };
 
-pub mod calendar;
 pub mod compliance;
-pub mod contacts;
 pub mod core;
-pub mod files;
-pub mod group_share;
 pub mod mail;
 pub mod principal;
 
@@ -126,12 +122,6 @@ pub async fn jmap_tests() {
         })
         .await;
     admin
-        .registry_create_object(CalendarAlarm {
-            min_trigger_interval: 1000u64.into(),
-            ..Default::default()
-        })
-        .await;
-    admin
         .registry_create_object(Sharing {
             allow_directory_queries: true,
             ..Default::default()
@@ -209,25 +199,7 @@ pub async fn jmap_tests() {
     core::push_subscription::test(&test).await;
     core::blob::test(&test).await;
 
-    contacts::addressbook::test(&test).await;
-    contacts::contact::test(&test).await;
-    contacts::acl::test(&test).await;
-
-    files::node::test(&test).await;
-    files::acl::test(&test).await;
-
-    calendar::calendars::test(&test).await;
-    calendar::event::test(&test).await;
-    calendar::instance::test(&test).await;
-    calendar::notification::test(&test).await;
-    calendar::alarm::test(&test).await;
-
-    calendar::identity::test(&test).await;
-    calendar::acl::test(&test).await;
-    group_share::test(&test).await;
-
     principal::get::test(&test).await;
-    principal::availability::test(&test).await;
 
     compliance::test(&test).await;
 

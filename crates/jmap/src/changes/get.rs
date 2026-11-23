@@ -9,7 +9,6 @@
 use crate::{api::auth::JmapAuthorization, changes::state::JmapCacheState};
 use common::{Server, auth::AccessToken};
 use email::cache::{MessageCacheFetch, email::MessageCacheAccess, mailbox::MailboxCacheAccess};
-use groupware::cache::GroupwareCache;
 use jmap_proto::{
     method::changes::{ChangesRequest, ChangesResponse},
     object::{JmapObject, NullObject, mailbox::MailboxProperty},
@@ -22,7 +21,6 @@ use store::{
     query::log::{Change, Query},
     roaring::RoaringBitmap,
 };
-use trc::AddContext;
 use types::{
     acl::Acl,
     collection::{Collection, SyncCollection},
@@ -76,36 +74,6 @@ impl ChangesLookup for Server {
 
                 (SyncCollection::EmailSubmission, false)
             }
-            MethodObject::AddressBook => {
-                access_token.assert_has_access(request.account_id, Collection::AddressBook)?;
-
-                (SyncCollection::AddressBook, true)
-            }
-            MethodObject::ContactCard => {
-                access_token.assert_has_access(request.account_id, Collection::ContactCard)?;
-
-                (SyncCollection::AddressBook, false)
-            }
-            MethodObject::FileNode => {
-                access_token.assert_has_access(request.account_id, Collection::FileNode)?;
-
-                (SyncCollection::FileNode, false)
-            }
-            MethodObject::Calendar => {
-                access_token.assert_has_access(request.account_id, Collection::Calendar)?;
-
-                (SyncCollection::Calendar, true)
-            }
-            MethodObject::CalendarEvent => {
-                access_token.assert_has_access(request.account_id, Collection::CalendarEvent)?;
-
-                (SyncCollection::Calendar, false)
-            }
-            MethodObject::CalendarEventNotification => {
-                access_token.assert_is_member(request.account_id)?;
-
-                (SyncCollection::CalendarEventNotification, false)
-            }
             MethodObject::ShareNotification => {
                 access_token.assert_is_member(request.account_id)?;
 
@@ -157,46 +125,6 @@ impl ChangesLookup for Server {
                     }
                     threads
                 }
-                MethodObject::AddressBook => self
-                    .fetch_dav_resources(
-                        access_token.account_id(),
-                        account_id,
-                        SyncCollection::AddressBook,
-                    )
-                    .await?
-                    .shared_containers(access_token, [Acl::Read, Acl::ReadItems], true),
-                MethodObject::ContactCard => self
-                    .fetch_dav_resources(
-                        access_token.account_id(),
-                        account_id,
-                        SyncCollection::AddressBook,
-                    )
-                    .await?
-                    .shared_items(access_token, [Acl::ReadItems], true),
-                MethodObject::Calendar => self
-                    .fetch_dav_resources(
-                        access_token.account_id(),
-                        account_id,
-                        SyncCollection::Calendar,
-                    )
-                    .await?
-                    .shared_containers(access_token, [Acl::Read, Acl::ReadItems], true),
-                MethodObject::CalendarEvent => self
-                    .fetch_dav_resources(
-                        access_token.account_id(),
-                        account_id,
-                        SyncCollection::Calendar,
-                    )
-                    .await?
-                    .shared_items(access_token, [Acl::ReadItems], true),
-                MethodObject::FileNode => self
-                    .fetch_dav_resources(
-                        access_token.account_id(),
-                        account_id,
-                        SyncCollection::FileNode,
-                    )
-                    .await?
-                    .shared_documents(access_token, [Acl::Read, Acl::ReadItems], true),
                 _ => RoaringBitmap::new(),
             })
         };
@@ -219,12 +147,6 @@ impl ChangesLookup for Server {
             }
             State::Exact(change_id) => {
                 let last_state = match collection {
-                    SyncCollection::Calendar | SyncCollection::AddressBook => self
-                        .fetch_dav_resources(access_token.account_id(), account_id, collection)
-                        .await
-                        .caused_by(trc::location!())?
-                        .get_state(is_container)
-                        .into(),
                     SyncCollection::Email => self
                         .get_cached_messages(account_id)
                         .await?
@@ -385,29 +307,10 @@ impl IntermediateChangesResponse {
             MethodObject::EmailSubmission => {
                 ChangesResponseMethod::EmailSubmission(transmute_response(self.response))
             }
-            MethodObject::AddressBook => {
-                ChangesResponseMethod::AddressBook(transmute_response(self.response))
-            }
-            MethodObject::ContactCard => {
-                ChangesResponseMethod::ContactCard(transmute_response(self.response))
-            }
-            MethodObject::FileNode => {
-                ChangesResponseMethod::FileNode(transmute_response(self.response))
-            }
-            MethodObject::Calendar => {
-                ChangesResponseMethod::Calendar(transmute_response(self.response))
-            }
-            MethodObject::CalendarEvent => {
-                ChangesResponseMethod::CalendarEvent(transmute_response(self.response))
-            }
-            MethodObject::CalendarEventNotification => {
-                ChangesResponseMethod::CalendarEventNotification(transmute_response(self.response))
-            }
             MethodObject::ShareNotification => {
                 ChangesResponseMethod::ShareNotification(transmute_response(self.response))
             }
-            MethodObject::ParticipantIdentity
-            | MethodObject::Core
+            MethodObject::Core
             | MethodObject::Blob
             | MethodObject::PushSubscription
             | MethodObject::SearchSnippet

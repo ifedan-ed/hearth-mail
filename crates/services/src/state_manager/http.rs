@@ -12,7 +12,6 @@ use super::{
     email_push::build_email_push_object,
 };
 use crate::state_manager::{PushBatch, PushRegistration};
-use calcard::jscalendar::JSCalendarDateTime;
 use common::{
     Server,
     ipc::PushNotification,
@@ -72,35 +71,10 @@ impl PushRegistration {
 
             let mut failed = PushBatch::default();
             let mut failed_email_pushes = Vec::new();
-            let mut failed_calendar_alerts = Vec::new();
 
             for notification in &batch.notifications {
                 match notification {
                     PushNotification::StateChange(_) => {}
-                    PushNotification::CalendarAlert(calendar_alert) => {
-                        let payload = PushObject::CalendarAlert {
-                            account_id: calendar_alert.account_id.into(),
-                            calendar_event_id: calendar_alert.event_id.into(),
-                            uid: calendar_alert.uid.clone(),
-                            recurrence_id: calendar_alert.recurrence_id.map(|timestamp| {
-                                JSCalendarDateTime::new(timestamp, true).to_rfc3339()
-                            }),
-                            alert_id: calendar_alert.alert_id.clone(),
-                        };
-                        if !post_object(
-                            &push_client,
-                            &subscription,
-                            &payload,
-                            push_timeout,
-                            vapid,
-                            Urgency::Normal,
-                        )
-                        .await
-                        {
-                            failed_calendar_alerts
-                                .push((calendar_alert.account_id, calendar_alert.event_id));
-                        }
-                    }
                     PushNotification::EmailPush(email_push) => {
                         if let Some(config) = subscription
                             .email_push
@@ -200,10 +174,7 @@ impl PushRegistration {
                 }
             }
 
-            let result = if failed.state_changes.is_empty()
-                && failed_email_pushes.is_empty()
-                && failed_calendar_alerts.is_empty()
-            {
+            let result = if failed.state_changes.is_empty() && failed_email_pushes.is_empty() {
                 Event::DeliverySuccess { id }
             } else {
                 failed.notifications = batch
@@ -214,8 +185,6 @@ impl PushRegistration {
                         PushNotification::EmailPush(email_push) => {
                             failed_email_pushes.contains(&email_push.account_id)
                         }
-                        PushNotification::CalendarAlert(calendar_alert) => failed_calendar_alerts
-                            .contains(&(calendar_alert.account_id, calendar_alert.event_id)),
                     })
                     .collect();
 

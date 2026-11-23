@@ -18,18 +18,14 @@ use crate::{
     },
 };
 use common::{Server, auth::AccessToken};
-use groupware::{
-    calendar::itip::{ItipIngest, ItipIngestError},
-    scheduling::{ItipError, ItipMessages},
-};
 use mail_parser::{
-    Header, HeaderName, HeaderValue, Message, MessageParser, MimeHeaders, PartType,
+    Header, HeaderName, HeaderValue, Message, MessageParser, PartType,
     parsers::fields::thread::thread_name,
 };
 use registry::{
     schema::{
         enums::IndexDocumentType,
-        prelude::{ObjectType, Permission, Property},
+        prelude::{ObjectType, Property},
         structs::{SpamTrainingSample, Task, TaskIndexDocument, TaskMergeThreads, TaskStatus},
     },
     types::{EnumImpl, ObjectImpl, datetime::UTCDateTime, id::ObjectId, map::Map},
@@ -50,12 +46,12 @@ use types::{
     blob::{BlobClass, BlobId},
     blob_hash::BlobHash,
     collection::{Collection, SyncCollection},
-    field::{ContactField, EmailField, MailboxField},
+    field::{EmailField, MailboxField},
     id::Id,
     keyword::Keyword,
     special_use::SpecialUse,
 };
-use utils::{cheeky_hash::CheekyHash, sanitize_email, snowflake::SnowflakeIdGenerator};
+use utils::{cheeky_hash::CheekyHash, snowflake::SnowflakeIdGenerator};
 
 #[derive(Default)]
 pub struct IngestedEmail {
@@ -259,27 +255,17 @@ impl EmailIngest for Server {
         let mut train_spam = None;
         let mut extra_headers = String::new();
         let mut extra_headers_parsed = Vec::new();
-        let mut itip_messages = Vec::new();
         let is_spam = match params.source {
+            // The verified sender was used only to trust senders found in the
+            // account's address book and to process calendar invitations, both
+            // gone with contacts and calendars. A contacts lookup through
+            // Nextcloud or Hearth may use it again (docs/integration.md).
             IngestSource::Smtp {
                 deliver_to,
-                envelope_from,
-                verified_sender,
+                envelope_from: _,
+                verified_sender: _,
                 mut is_spam,
             } => {
-                // inbuxa: a signed-in sender is known by its envelope address,
-                // which submission checks against the account; the From header
-                // is trusted only when it passed DMARC
-                let sender = match verified_sender {
-                    VerifiedSender::Envelope => sanitize_email(envelope_from),
-                    VerifiedSender::FromHeader => message
-                        .from()
-                        .and_then(|s| s.first())
-                        .and_then(|s| s.address())
-                        .and_then(sanitize_email),
-                    VerifiedSender::None => None,
-                };
-
                 // Add delivered to header
                 if self.core.smtp.session.data.add_delivered_to {
                     extra_headers = format!("Delivered-To: {deliver_to}\r\n");
@@ -295,35 +281,6 @@ impl EmailIngest for Server {
                 // Spam training on confirmed false positives
                 if self.core.spam.enabled {
                     let mut overridden = None;
-                    // If the message is classified as spam, check whether the
-                    // sender address is present in the user's address book.
-                    if is_spam
-                        && self.core.spam.card_is_ham
-                        && let Some(sender) = &sender
-                        && sender != deliver_to
-                        && self
-                            .document_exists(
-                                account_id,
-                                Collection::ContactCard,
-                                ContactField::Email,
-                                sender.as_bytes(),
-                            )
-                            .await
-                            .caused_by(trc::location!())?
-                    {
-                        is_spam = false;
-                        if self
-                            .core
-                            .spam
-                            .classifier
-                            .as_ref()
-                            .is_some_and(|c| c.auto_learn_card_is_ham)
-                        {
-                            train_spam = Some(false);
-                        }
-                        overridden = Some("card-exists");
-                    }
-
                     // Check if the message is a trusted reply to a previous message
                     if is_spam
                         && self.core.spam.trusted_reply
@@ -385,75 +342,6 @@ impl EmailIngest for Server {
                     if is_spam && params.mailbox_ids == [INBOX_ID] {
                         params.mailbox_ids[0] = JUNK_ID;
                         params.keywords.push(Keyword::Junk);
-                    }
-                }
-
-                // iMIP processing
-                if self.core.groupware.itip_enabled
-                    && !is_spam
-                    && let Some(sender) = &sender
-                    && params
-                        .access_token
-                        .has_permission(Permission::CalendarSchedulingReceive)
-                {
-                    let account_info = self
-                        .build_account_info(account.clone())
-                        .await
-                        .caused_by(trc::location!())?;
-                    for part in &message.parts {
-                        if part.content_type().is_some_and(|ct| {
-                            ct.ctype().eq_ignore_ascii_case("text")
-                                && ct
-                                    .subtype()
-                                    .is_some_and(|st| st.eq_ignore_ascii_case("calendar"))
-                                && ct.has_attribute("method")
-                        }) && let Some(itip_message) = part.text_contents()
-                        {
-                            if itip_message.len() < self.core.groupware.itip_inbound_max_ical_size {
-                                match self
-                                    .itip_ingest(&account_info, sender, deliver_to, itip_message)
-                                    .await
-                                {
-                                    Ok(message) => {
-                                        if let Some(message) = message {
-                                            itip_messages.push(message);
-                                        }
-                                        trc::event!(
-                                            Calendar(trc::CalendarEvent::ItipMessageReceived),
-                                            SpanId = params.session_id,
-                                            From = sender.to_string(),
-                                            AccountId = account_id,
-                                        );
-                                    }
-                                    Err(ItipIngestError::Message(itip_error)) => match itip_error {
-                                        ItipError::NothingToSend
-                                        | ItipError::OtherSchedulingAgent => (),
-                                        err => {
-                                            trc::event!(
-                                                Calendar(trc::CalendarEvent::ItipMessageError),
-                                                SpanId = params.session_id,
-                                                From = sender.to_string(),
-                                                AccountId = account_id,
-                                                Details = err.to_string(),
-                                            )
-                                        }
-                                    },
-                                    Err(ItipIngestError::Internal(err)) => {
-                                        trc::error!(err.caused_by(trc::location!()));
-                                    }
-                                }
-                            } else {
-                                trc::event!(
-                                    Calendar(trc::CalendarEvent::ItipMessageError),
-                                    SpanId = params.session_id,
-                                    From = sender.to_string(),
-                                    AccountId = account_id,
-                                    Details = "iMIP message too large",
-                                    Limit = self.core.groupware.itip_inbound_max_ical_size,
-                                    Size = itip_message.len(),
-                                )
-                            }
-                        }
                     }
                 }
 
@@ -689,13 +577,6 @@ impl EmailIngest for Server {
                 thread_name: thread_result.thread_hash.to_string(),
                 message_ids: Map::new(message_ids.into_iter().map(|id| id.to_string()).collect()),
             }));
-        }
-
-        // Add iTIP responses to batch
-        if !itip_messages.is_empty() {
-            ItipMessages::new(itip_messages)
-                .queue(&mut batch)
-                .caused_by(trc::location!())?;
         }
 
         // Insert and obtain ids

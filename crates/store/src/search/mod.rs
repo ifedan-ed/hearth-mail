@@ -40,9 +40,6 @@ pub enum SearchField {
     DocumentId,
     Id,
     Email(EmailSearchField),
-    Calendar(CalendarSearchField),
-    Contact(ContactSearchField),
-    File(FileSearchField),
     Tracing(TracingSearchField),
 }
 
@@ -60,38 +57,6 @@ pub enum EmailSearchField {
     Size,
     HasAttachment,
     Headers,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum CalendarSearchField {
-    Title,
-    Description,
-    Location,
-    Owner,
-    Attendee,
-    Start,
-    Uid,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ContactSearchField {
-    Member,
-    Kind,
-    Name,
-    Nickname,
-    Organization,
-    Email,
-    Phone,
-    OnlineService,
-    Address,
-    Note,
-    Uid,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum FileSearchField {
-    Name,
-    Content,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -169,24 +134,6 @@ pub struct QueryResults {
 impl From<EmailSearchField> for SearchField {
     fn from(field: EmailSearchField) -> Self {
         SearchField::Email(field)
-    }
-}
-
-impl From<CalendarSearchField> for SearchField {
-    fn from(field: CalendarSearchField) -> Self {
-        SearchField::Calendar(field)
-    }
-}
-
-impl From<ContactSearchField> for SearchField {
-    fn from(field: ContactSearchField) -> Self {
-        SearchField::Contact(field)
-    }
-}
-
-impl From<FileSearchField> for SearchField {
-    fn from(field: FileSearchField) -> Self {
-        SearchField::File(field)
     }
 }
 
@@ -275,9 +222,6 @@ impl SearchIndex {
     pub fn index_name(&self) -> &'static str {
         match self {
             SearchIndex::Email => "st_email",
-            SearchIndex::Calendar => "st_calendar",
-            SearchIndex::Contacts => "st_contact",
-            SearchIndex::File => "st_file",
             SearchIndex::Tracing => "st_tracing",
             SearchIndex::InMemory => unreachable!(),
         }
@@ -303,32 +247,6 @@ impl SearchField {
                 EmailSearchField::Size => "size",
                 EmailSearchField::HasAttachment => "has_att",
                 EmailSearchField::Headers => "headers",
-            },
-            SearchField::Calendar(field) => match field {
-                CalendarSearchField::Title => "title",
-                CalendarSearchField::Description => "desc",
-                CalendarSearchField::Location => "loc",
-                CalendarSearchField::Owner => "owner",
-                CalendarSearchField::Attendee => "attendee",
-                CalendarSearchField::Start => "start",
-                CalendarSearchField::Uid => "uid",
-            },
-            SearchField::Contact(field) => match field {
-                ContactSearchField::Member => "member",
-                ContactSearchField::Kind => "kind",
-                ContactSearchField::Name => "name",
-                ContactSearchField::Nickname => "nick",
-                ContactSearchField::Organization => "org",
-                ContactSearchField::Email => "email",
-                ContactSearchField::Phone => "phone",
-                ContactSearchField::OnlineService => "online",
-                ContactSearchField::Address => "addr",
-                ContactSearchField::Note => "note",
-                ContactSearchField::Uid => "uid",
-            },
-            SearchField::File(field) => match field {
-                FileSearchField::Name => "name",
-                FileSearchField::Content => "content",
             },
             SearchField::Tracing(field) => match field {
                 TracingSearchField::EventType => "ev_type",

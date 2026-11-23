@@ -426,7 +426,7 @@ default = "none"
 # Sources that are no object. Settings are `<object>.<property>`: a schema
 # field object, or one of inbuxa's own.
 
-[source."mail-and-groupware"]
+[source."mail"]
 categories = ["content", "identifier", "contact", "metadata"]
 whose = ["holder", "correspondent"]
 where = ["data-store", "blob-store"]
@@ -434,7 +434,7 @@ scope = "tenant"
 retention = "unbounded"
 captures = ["x:DataRetention.expungeTrashAfter", "x:DataRetention.expungeSubmissionsAfter"]
 leaves_host = false
-written_by = ["crates/email/src/message/ingest.rs", "crates/groupware/src/calendar/storage.rs", "crates/groupware/src/contact/storage.rs", "crates/groupware/src/file/storage.rs"]
+written_by = ["crates/email/src/message/ingest.rs"]
 
 # Scheduled reports are built when they're sent and not stored; the mail
 # lands in administrators' own mailboxes on this server (scheduled-reports
@@ -492,8 +492,8 @@ whose = ["holder", "correspondent"]
 where = ["search-store"]
 scope = "tenant"
 retention = "object-life"
-enabled_by = ["x:Search.indexEmail", "x:Search.indexCalendar", "x:Search.indexContacts"]
-captures = ["x:Search.indexEmailFields", "x:Search.indexCalendarFields", "x:Search.indexContactFields"]
+enabled_by = ["x:Search.indexEmail"]
+captures = ["x:Search.indexEmailFields"]
 leaves_host = false
 written_by = ["crates/services/src/task_manager/index.rs"]
 
@@ -697,35 +697,6 @@ written_by = ["crates/smtp/src/reporting/dmarc.rs", "crates/smtp/src/reporting/t
 # ---------------------------------------------------------------------------
 # Registry objects, one per schema field object.
 
-[object."AddressBook"]
-default = "none"
-whose = ["holder"]
-where = ["data-store"]
-scope = "tenant"
-retention = "object-life"
-[object."AddressBook".properties]
-description = ["content"]
-name = ["content"]
-shareWith = ["identifier"]
-
-[object."AddressBookRights"]
-default = "none"
-
-[object."Calendar"]
-default = "none"
-whose = ["holder"]
-where = ["data-store"]
-scope = "tenant"
-retention = "object-life"
-[object."Calendar".properties]
-description = ["content"]
-name = ["content"]
-shareWith = ["identifier"]
-timeZone = ["metadata"]
-
-[object."CalendarRights"]
-default = "none"
-
 [object."Mailbox"]
 default = "none"
 whose = ["holder"]
@@ -808,9 +779,6 @@ contact = ["contact"]
 eabHmacKey = ["credential"]
 eabKeyId = ["credential"]
 
-[object."x:AddressBook"]
-default = "none"
-
 [object."x:AiModel"]
 default = "none"
 [object."x:AiModel".properties]
@@ -874,33 +842,6 @@ secret = ["credential"]
 [object."x:Application"]
 default = "none"
 
-[object."x:ArchivedCalendarEvent"]
-default = "none"
-whose = ["holder", "correspondent"]
-where = ["data-store", "blob-store"]
-scope = "tenant"
-retention = { setting = "x:DataRetention.archiveDeletedItemsFor" }
-[object."x:ArchivedCalendarEvent".properties]
-archivedAt = ["metadata"]
-archivedUntil = ["metadata"]
-blobId = ["content"]
-createdAt = ["metadata"]
-startTime = ["metadata"]
-title = ["content"]
-
-[object."x:ArchivedContactCard"]
-default = "none"
-whose = ["holder", "correspondent"]
-where = ["data-store", "blob-store"]
-scope = "tenant"
-retention = { setting = "x:DataRetention.archiveDeletedItemsFor" }
-[object."x:ArchivedContactCard".properties]
-archivedAt = ["metadata"]
-archivedUntil = ["metadata"]
-blobId = ["contact"]
-createdAt = ["metadata"]
-name = ["contact"]
-
 [object."x:ArchivedEmail"]
 default = "none"
 whose = ["holder", "correspondent"]
@@ -915,19 +856,6 @@ from = ["identifier"]
 receivedAt = ["metadata"]
 size = ["metadata"]
 subject = ["content"]
-
-[object."x:ArchivedFileNode"]
-default = "none"
-whose = ["holder"]
-where = ["data-store", "blob-store"]
-scope = "tenant"
-retention = { setting = "x:DataRetention.archiveDeletedItemsFor" }
-[object."x:ArchivedFileNode".properties]
-archivedAt = ["metadata"]
-archivedUntil = ["metadata"]
-blobId = ["content"]
-createdAt = ["metadata"]
-name = ["content"]
 
 [object."x:ArchivedSieveScript"]
 default = "none"
@@ -1016,22 +944,6 @@ secret = ["credential"]
 username = ["identifier"]
 
 [object."x:Cache"]
-default = "none"
-
-[object."x:Calendar"]
-default = "none"
-
-[object."x:CalendarAlarm"]
-default = "none"
-whose = ["administrator"]
-where = ["data-store"]
-scope = "server"
-retention = "object-life"
-[object."x:CalendarAlarm".properties]
-fromEmail = ["contact"]
-fromName = ["contact"]
-
-[object."x:CalendarScheduling"]
 default = "none"
 
 [object."x:Certificate"]
@@ -1479,9 +1391,6 @@ default = "none"
 default = "none"
 
 [object."x:ExpressionMatch"]
-default = "none"
-
-[object."x:FileStorage"]
 default = "none"
 
 [object."x:FileSystemStore"]
@@ -2114,27 +2023,6 @@ proxyTrustedNetworks = ["network"]
 [object."x:TaskAccountMaintenance"]
 default = "none"
 
-[object."x:TaskCalendarAlarmEmail"]
-default = "none"
-
-[object."x:TaskCalendarAlarmNotification"]
-default = "none"
-
-[object."x:TaskCalendarItipContents"]
-default = "none"
-whose = ["holder", "correspondent"]
-where = ["data-store"]
-scope = "tenant"
-retention = "object-life"
-[object."x:TaskCalendarItipContents".properties]
-from = ["identifier"]
-iCalendarData = ["content"]
-summary = ["content"]
-to = ["identifier"]
-
-[object."x:TaskCalendarItipMessage"]
-default = "none"
-
 [object."x:TaskDestroyAccount"]
 default = "none"
 whose = ["holder"]
@@ -2400,9 +2288,6 @@ memberGroupIds = ["identifier"]
 name = ["identifier"]
 timeZone = ["metadata"]
 usedDiskQuota = ["metadata"]
-
-[object."x:WebDav"]
-default = "none"
 
 [object."x:WebHook"]
 # Configuration: the "webhooks" and "otel-tracer" sources carry what it sends

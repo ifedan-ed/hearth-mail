@@ -99,7 +99,6 @@ impl RegistryGet for Server {
 
         match object_type {
             ObjectType::AcmeProvider
-            | ObjectType::AddressBook
             | ObjectType::AiModel
             | ObjectType::Alert
             | ObjectType::AllowedIp
@@ -109,9 +108,6 @@ impl RegistryGet for Server {
             | ObjectType::BlobStore
             | ObjectType::BlockedIp
             | ObjectType::Cache
-            | ObjectType::Calendar
-            | ObjectType::CalendarAlarm
-            | ObjectType::CalendarScheduling
             | ObjectType::Certificate
             | ObjectType::Coordinator
             | ObjectType::DataRetention
@@ -124,7 +120,6 @@ impl RegistryGet for Server {
             | ObjectType::Email
             | ObjectType::Enterprise
             | ObjectType::EventTracingLevel
-            | ObjectType::FileStorage
             | ObjectType::Http
             | ObjectType::HttpForm
             | ObjectType::HttpLookup
@@ -184,7 +179,6 @@ impl RegistryGet for Server {
             | ObjectType::TlsReportSettings
             | ObjectType::Tracer
             | ObjectType::TracingStore
-            | ObjectType::WebDav
             | ObjectType::WebHook
             | ObjectType::Account
             | ObjectType::DsnReportSettings

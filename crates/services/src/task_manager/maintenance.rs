@@ -13,21 +13,16 @@ use crate::task_manager::{
     index::{reindex_account, reindex_telemetry},
 };
 use common::{
-    KV_ACME, KV_GREYLIST, KV_LOCK_DAV, KV_LOCK_QUEUE_MESSAGE, KV_LOCK_TASK, KV_OAUTH,
-    KV_OAUTH_DEVICE, KV_QUOTA_BLOB, KV_RATE_LIMIT_AUTH, KV_RATE_LIMIT_CONTACT,
-    KV_RATE_LIMIT_HTTP_ANONYMOUS, KV_RATE_LIMIT_HTTP_AUTHENTICATED, KV_RATE_LIMIT_IMAP,
-    KV_RATE_LIMIT_LOITER, KV_RATE_LIMIT_RCPT, KV_RATE_LIMIT_SCAN, KV_RATE_LIMIT_SMTP, KV_SIEVE_ID,
-    Server, storage::index::ObjectIndexBuilder,
+    KV_ACME, KV_GREYLIST, KV_LOCK_QUEUE_MESSAGE, KV_LOCK_TASK, KV_OAUTH, KV_OAUTH_DEVICE,
+    KV_QUOTA_BLOB, KV_RATE_LIMIT_AUTH, KV_RATE_LIMIT_CONTACT, KV_RATE_LIMIT_HTTP_ANONYMOUS,
+    KV_RATE_LIMIT_HTTP_AUTHENTICATED, KV_RATE_LIMIT_IMAP, KV_RATE_LIMIT_LOITER, KV_RATE_LIMIT_RCPT,
+    KV_RATE_LIMIT_SCAN, KV_RATE_LIMIT_SMTP, KV_SIEVE_ID, Server,
+    storage::index::ObjectIndexBuilder,
 };
 use email::{
     cache::MessageCacheFetch,
     message::{delete::EmailDeletion, ingest::EmailIngest, metadata::MessageData},
     sieve::SieveScript,
-};
-use groupware::{
-    calendar::{Calendar, CalendarEvent, CalendarEventNotification},
-    contact::{AddressBook, ContactCard},
-    file::FileNode,
 };
 use registry::{
     schema::{
@@ -356,7 +351,6 @@ async fn store_maintenance(
         TaskStoreMaintenanceType::RemoveGreylist
         | TaskStoreMaintenanceType::RemoveLockQueueMessage
         | TaskStoreMaintenanceType::RemoveLockTask
-        | TaskStoreMaintenanceType::RemoveLockDav
         | TaskStoreMaintenanceType::RemoveSieveId
         | TaskStoreMaintenanceType::ResetRateLimiters
         | TaskStoreMaintenanceType::ResetBlobQuotas
@@ -393,7 +387,6 @@ async fn store_maintenance(
                 TaskStoreMaintenanceType::RemoveGreylist => &[KV_GREYLIST][..],
                 TaskStoreMaintenanceType::RemoveLockQueueMessage => &[KV_LOCK_QUEUE_MESSAGE][..],
                 TaskStoreMaintenanceType::RemoveLockTask => &[KV_LOCK_TASK][..],
-                TaskStoreMaintenanceType::RemoveLockDav => &[KV_LOCK_DAV][..],
                 TaskStoreMaintenanceType::RemoveSieveId => &[KV_SIEVE_ID][..],
                 TaskStoreMaintenanceType::ResetRateLimiters => &[
                     KV_RATE_LIMIT_RCPT,
@@ -510,39 +503,12 @@ async fn tenant_maintenance(
 async fn recalculate_quota(server: &Server, account_id: u32) -> trc::Result<()> {
     let mut quota = 0;
 
-    for collection in [
-        Collection::Email,
-        Collection::Calendar,
-        Collection::CalendarEvent,
-        Collection::CalendarEventNotification,
-        Collection::AddressBook,
-        Collection::ContactCard,
-        Collection::FileNode,
-        Collection::SieveScript,
-    ] {
+    for collection in [Collection::Email, Collection::SieveScript] {
         server
             .archives(account_id, collection, &(), |_, archive| {
                 match collection {
                     Collection::Email => {
                         quota += archive.unarchive::<MessageData>()?.size.to_native() as i64;
-                    }
-                    Collection::Calendar => {
-                        quota += archive.unarchive::<Calendar>()?.size() as i64;
-                    }
-                    Collection::CalendarEvent => {
-                        quota += archive.unarchive::<CalendarEvent>()?.size() as i64;
-                    }
-                    Collection::CalendarEventNotification => {
-                        quota += archive.unarchive::<CalendarEventNotification>()?.size() as i64;
-                    }
-                    Collection::AddressBook => {
-                        quota += archive.unarchive::<AddressBook>()?.size() as i64;
-                    }
-                    Collection::ContactCard => {
-                        quota += archive.unarchive::<ContactCard>()?.size() as i64;
-                    }
-                    Collection::FileNode => {
-                        quota += archive.unarchive::<FileNode>()?.size() as i64;
                     }
                     Collection::SieveScript => {
                         quota += u32::from(archive.unarchive::<SieveScript>()?.size) as i64;

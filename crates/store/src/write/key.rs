@@ -642,9 +642,6 @@ impl SearchIndex {
     pub fn to_u8(&self) -> u8 {
         match self {
             SearchIndex::Email => 0,
-            SearchIndex::Calendar => 1,
-            SearchIndex::Contacts => 2,
-            SearchIndex::File => 3,
             SearchIndex::Tracing => 4,
             SearchIndex::InMemory => unreachable!(),
         }
@@ -653,9 +650,6 @@ impl SearchIndex {
     pub fn try_from_u8(value: u8) -> Option<Self> {
         match value {
             0 => Some(SearchIndex::Email),
-            1 => Some(SearchIndex::Calendar),
-            2 => Some(SearchIndex::Contacts),
-            3 => Some(SearchIndex::File),
             4 => Some(SearchIndex::Tracing),
             _ => None,
         }
@@ -664,9 +658,6 @@ impl SearchIndex {
     pub fn name(&self) -> &'static str {
         match self {
             SearchIndex::Email => "email",
-            SearchIndex::Calendar => "calendar",
-            SearchIndex::Contacts => "contacts",
-            SearchIndex::File => "file",
             SearchIndex::Tracing => "tracing",
             SearchIndex::InMemory => "in_memory",
         }
@@ -675,9 +666,6 @@ impl SearchIndex {
     pub fn try_from_str(value: &str) -> Option<Self> {
         match value {
             "email" => Some(SearchIndex::Email),
-            "calendar" => Some(SearchIndex::Calendar),
-            "contacts" => Some(SearchIndex::Contacts),
-            "file" => Some(SearchIndex::File),
             "tracing" => Some(SearchIndex::Tracing),
             _ => None,
         }

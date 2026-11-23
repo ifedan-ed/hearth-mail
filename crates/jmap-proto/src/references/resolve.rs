@@ -89,19 +89,7 @@ impl Response<'_> {
                 GetRequestMethod::Principal(request) => request.resolve_references(self)?,
                 GetRequestMethod::Quota(request) => request.resolve_references(self)?,
                 GetRequestMethod::Blob(request) => request.resolve_references(self)?,
-                GetRequestMethod::AddressBook(request) => request.resolve_references(self)?,
-                GetRequestMethod::ContactCard(request) => request.resolve_references(self)?,
-                GetRequestMethod::FileNode(request) => request.resolve_references(self)?,
                 GetRequestMethod::ShareNotification(request) => request.resolve_references(self)?,
-                GetRequestMethod::Calendar(request) => request.resolve_references(self)?,
-                GetRequestMethod::CalendarEvent(request) => request.resolve_references(self)?,
-                GetRequestMethod::CalendarEventNotification(request) => {
-                    request.resolve_references(self)?
-                }
-                GetRequestMethod::ParticipantIdentity(request) => {
-                    request.resolve_references(self)?
-                }
-                GetRequestMethod::PrincipalAvailability(_) => (),
                 GetRequestMethod::Registry(request) => request.resolve_references(self)?,
             },
             RequestMethod::Set(request) => match request {
@@ -216,43 +204,13 @@ impl Response<'_> {
                 SetRequestMethod::FrontEnds(request) => {
                     request.resolve_references(self, 1, false)?
                 }
-                SetRequestMethod::AddressBook(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                SetRequestMethod::ContactCard(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                SetRequestMethod::FileNode(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
                 SetRequestMethod::ShareNotification(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                SetRequestMethod::Calendar(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                SetRequestMethod::CalendarEvent(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                SetRequestMethod::CalendarEventNotification(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                SetRequestMethod::ParticipantIdentity(request) => {
                     request.resolve_references(self, 1, false)?
                 }
                 SetRequestMethod::Registry(request) => request.resolve_references(self, 5, true)?,
             },
             RequestMethod::Copy(request) => match request {
                 CopyRequestMethod::Email(request) => request.resolve_references(self, 1, false)?,
-                CopyRequestMethod::CalendarEvent(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                CopyRequestMethod::ContactCard(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
-                CopyRequestMethod::FileNode(request) => {
-                    request.resolve_references(self, 1, false)?
-                }
                 CopyRequestMethod::Blob(_) => (),
             },
             RequestMethod::ImportEmail(request) => request.resolve_references(self)?,
@@ -260,8 +218,6 @@ impl Response<'_> {
             RequestMethod::UploadBlob(request) => request.resolve_references(self)?,
             RequestMethod::Parse(request) => match request {
                 ParseRequestMethod::Email(request) => request.resolve_references(self)?,
-                ParseRequestMethod::ContactCard(request) => request.resolve_references(self)?,
-                ParseRequestMethod::CalendarEvent(request) => request.resolve_references(self)?,
             },
             _ => {}
         }

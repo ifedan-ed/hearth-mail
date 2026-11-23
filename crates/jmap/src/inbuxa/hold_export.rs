@@ -5,8 +5,8 @@
  */
 
 //! Collecting what a legal hold keeps, as a ZIP (audit-hold-lock spec,
-//! LH-12). For each account the hold covers (or those asked for): its mail,
-//! calendars, contacts and files, and the deleted items the hold keeps, each
+//! LH-12). For each account the hold covers (or those asked for): its mail
+//! and the deleted items the hold keeps, each
 //! with its SHA-256 in `manifest.csv`, and the manifest's own hash beside
 //! it. The hold's date range applies as it does to what's kept (LH-3).
 //! Anything the hold covers that can't be read goes in `exceptions.csv`
@@ -17,9 +17,6 @@ use common::{Server, hold::kept_member};
 use email::{
     cache::MessageCacheFetch,
     message::metadata::{MESSAGE_RECEIVED_MASK, MessageMetadata},
-};
-use groupware::{
-    cache::GroupwareCache, calendar::CalendarEvent, contact::ContactCard, file::FileNode,
 };
 use inbuxa_features::{
     hold::{Hold, Keeping, is_held_until},
@@ -34,11 +31,7 @@ use store::{
     write::{AlignedBytes, Archive},
 };
 use trc::AddContext;
-use types::{
-    collection::{Collection, SyncCollection},
-    field::EmailField,
-    id::Id,
-};
+use types::{collection::Collection, field::EmailField, id::Id};
 use zip::{CompressionMethod, ZipWriter, write::SimpleFileOptions};
 
 /// The largest ZIP built in memory. A bigger collection is refused with a
@@ -386,182 +379,6 @@ pub async fn build(server: &Server, hold: &Hold, asked: &[u32]) -> trc::Result<(
                     ),
                 }
             }
-
-            // Calendars, contacts and files, by their DAV paths
-            for (sync, kind) in [
-                (SyncCollection::Calendar, "event"),
-                (SyncCollection::AddressBook, "contact"),
-                (SyncCollection::FileNode, "file"),
-            ] {
-                let resources = server
-                    .fetch_dav_resources(account_id, account_id, sync)
-                    .await
-                    .caused_by(trc::location!())?;
-                for path in resources.paths.iter() {
-                    let Some(resource) = resources.resources.get(path.resource_idx) else {
-                        continue;
-                    };
-                    let folder = path
-                        .path
-                        .rsplit_once('/')
-                        .map(|(f, _)| f)
-                        .unwrap_or_default();
-                    let zip_path = |ext: Option<&str>| {
-                        let mut p = format!(
-                            "{base}{}/{}",
-                            match kind {
-                                "event" => "calendar",
-                                "contact" => "contacts",
-                                _ => "files",
-                            },
-                            path.path
-                                .split('/')
-                                .map(segment)
-                                .collect::<Vec<_>>()
-                                .join("/")
-                        );
-                        if let Some(ext) = ext
-                            && !p.ends_with(ext)
-                        {
-                            p.push_str(ext);
-                        }
-                        p
-                    };
-                    use common::DavResourceMetadata as M;
-                    match &resource.data {
-                        M::CalendarEvent { start, .. } => {
-                            if !keeping.covers_event(Some((*start).max(0) as u64)) {
-                                continue;
-                            }
-                            let Some(event_) = data
-                                .get_value::<Archive<AlignedBytes>>(ValueKey::archive(
-                                    account_id,
-                                    Collection::CalendarEvent,
-                                    resource.document_id,
-                                ))
-                                .await?
-                            else {
-                                out.missing(
-                                    zip_path(Some(".ics")),
-                                    &address,
-                                    kind,
-                                    folder,
-                                    Some(*start),
-                                    false,
-                                    NO_RECORD,
-                                );
-                                continue;
-                            };
-                            let event = event_
-                                .unarchive::<CalendarEvent>()
-                                .caused_by(trc::location!())?;
-                            let text = event.data.event.to_string();
-                            out.add(
-                                zip_path(Some(".ics")),
-                                text.as_bytes(),
-                                &address,
-                                kind,
-                                folder,
-                                Some(*start),
-                                false,
-                            )?;
-                        }
-                        M::ContactCard { .. } => {
-                            let Some(card_) = data
-                                .get_value::<Archive<AlignedBytes>>(ValueKey::archive(
-                                    account_id,
-                                    Collection::ContactCard,
-                                    resource.document_id,
-                                ))
-                                .await?
-                            else {
-                                out.missing(
-                                    zip_path(Some(".vcf")),
-                                    &address,
-                                    kind,
-                                    folder,
-                                    None,
-                                    false,
-                                    NO_RECORD,
-                                );
-                                continue;
-                            };
-                            let card = card_
-                                .unarchive::<ContactCard>()
-                                .caused_by(trc::location!())?;
-                            let mut text = String::with_capacity(256);
-                            let _ = card
-                                .card
-                                .write_to(&mut text, server.core.groupware.vcard_version);
-                            out.add(
-                                zip_path(Some(".vcf")),
-                                text.as_bytes(),
-                                &address,
-                                kind,
-                                folder,
-                                None,
-                                false,
-                            )?;
-                        }
-                        M::File { size: Some(_), .. } => {
-                            let Some(file_) = data
-                                .get_value::<Archive<AlignedBytes>>(ValueKey::archive(
-                                    account_id,
-                                    Collection::FileNode,
-                                    resource.document_id,
-                                ))
-                                .await?
-                            else {
-                                out.missing(
-                                    zip_path(None),
-                                    &address,
-                                    kind,
-                                    folder,
-                                    None,
-                                    false,
-                                    NO_RECORD,
-                                );
-                                continue;
-                            };
-                            let file = file_.unarchive::<FileNode>().caused_by(trc::location!())?;
-                            let Some(props) = file.file.as_ref() else {
-                                out.missing(
-                                    zip_path(None),
-                                    &address,
-                                    kind,
-                                    folder,
-                                    None,
-                                    false,
-                                    NO_RECORD,
-                                );
-                                continue;
-                            };
-                            let hash = types::blob_hash::BlobHash::from(&props.blob_hash);
-                            match blob(server, hash.as_slice()).await? {
-                                Some(bytes) => out.add(
-                                    zip_path(None),
-                                    &bytes,
-                                    &address,
-                                    kind,
-                                    folder,
-                                    None,
-                                    false,
-                                )?,
-                                None => out.missing(
-                                    zip_path(None),
-                                    &address,
-                                    kind,
-                                    folder,
-                                    None,
-                                    false,
-                                    NO_BLOB,
-                                ),
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
         }
 
         // What the hold keeps of what was deleted
@@ -571,23 +388,14 @@ pub async fn build(server: &Server, hold: &Hold, asked: &[u32]) -> trc::Result<(
             }
             let (kind, ext, date) = match &item {
                 ArchivedItem::Email(e) => ("email", ".eml", Some(e.received_at.timestamp())),
-                ArchivedItem::CalendarEvent(e) => {
-                    ("event", ".ics", e.start_time.map(|t| t.timestamp()))
-                }
-                ArchivedItem::ContactCard(_) => ("contact", ".vcf", None),
-                ArchivedItem::FileNode(_) => ("file", "", None),
                 ArchivedItem::SieveScript(_) => ("sieve", ".sieve", None),
             };
             // Kept by this hold, not only by another one over the same account
-            let in_range = match kind {
-                "event" => keeping.covers_event(date.map(|d| d.max(0) as u64)),
-                _ => keeping.covers(date.map(|d| d.max(0) as u64)),
-            };
+            let in_range = keeping.covers(date.map(|d| d.max(0) as u64));
             if !in_range {
                 continue;
             }
             let name = match &item {
-                ArchivedItem::FileNode(f) => segment(&f.name),
                 ArchivedItem::SieveScript(s) => format!("{}{ext}", segment(&s.name)),
                 _ => format!("{id}{ext}"),
             };

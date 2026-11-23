@@ -6,11 +6,10 @@
  * Modified by Coffey Labs in 2026 for INBUXA.
  */
 
-use common::{EVENT_VIEW_HIDE_ATTENDEES, EVENT_VIEW_PRIVATE, Server, auth::AccessToken};
+use common::{Server, auth::AccessToken};
 use email::cache::MessageCacheFetch;
 use email::cache::email::MessageCacheAccess;
 use email::message::metadata::MessageMetadata;
-use groupware::cache::GroupwareCache;
 use registry::schema::enums::Permission;
 use smtp::queue::Message;
 use smtp::queue::spool::SmtpSpool;
@@ -20,7 +19,7 @@ use store::write::{AlignedBytes, Archive, blob::BlobHolder};
 use trc::AddContext;
 use types::acl::Acl;
 use types::blob::{BlobClass, BlobId};
-use types::collection::{Collection, SyncCollection};
+use types::collection::Collection;
 use types::field::EmailField;
 use utils::chained_bytes::ChainedBytes;
 
@@ -134,27 +133,6 @@ impl BlobDownload for Server {
                                     .await
                                     .caused_by(trc::location!())?
                                     .shared_messages(access_token, Acl::ReadItems)
-                                    .contains(*document_id),
-                                collection @ (Collection::FileNode
-                                | Collection::ContactCard
-                                | Collection::CalendarEvent) => self
-                                    .fetch_dav_resources(
-                                        access_token.account_id(),
-                                        *account_id,
-                                        SyncCollection::from(collection),
-                                    )
-                                    .await
-                                    .caused_by(trc::location!())?
-                                    // inbuxa: a calendar event's blob holds all of
-                                    // it, so a sharee gets none of a private or
-                                    // confidential event or one that hides its
-                                    // attendees
-                                    .shared_events(
-                                        access_token,
-                                        [Acl::ReadItems],
-                                        true,
-                                        EVENT_VIEW_PRIVATE | EVENT_VIEW_HIDE_ATTENDEES,
-                                    )
                                     .contains(*document_id),
                                 _ => false,
                             }

@@ -388,13 +388,5 @@ pub async fn assert_is_empty(server: &Server, include_registry: bool) {
     search_store_destroy(server.search_store()).await;
 
     // Clean caches
-    for cache in [
-        &server.inner.cache.events,
-        &server.inner.cache.contacts,
-        &server.inner.cache.files,
-        &server.inner.cache.scheduling,
-    ] {
-        cache.clear();
-    }
     server.inner.cache.messages.clear();
 }

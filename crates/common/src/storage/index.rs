@@ -429,9 +429,6 @@ fn build_index(
                 document_id: batch.last_document_id().unwrap().into(),
                 document_type: match index {
                     SearchIndex::Email => IndexDocumentType::Email,
-                    SearchIndex::Calendar => IndexDocumentType::Calendar,
-                    SearchIndex::Contacts => IndexDocumentType::Contacts,
-                    SearchIndex::File => IndexDocumentType::File,
                     SearchIndex::Tracing | SearchIndex::InMemory => unreachable!(),
                 },
                 status: TaskStatus::now(),
@@ -577,9 +574,6 @@ fn merge_index(
                 document_id: batch.last_document_id().unwrap().into(),
                 document_type: match index {
                     SearchIndex::Email => IndexDocumentType::Email,
-                    SearchIndex::Calendar => IndexDocumentType::Calendar,
-                    SearchIndex::Contacts => IndexDocumentType::Contacts,
-                    SearchIndex::File => IndexDocumentType::File,
                     SearchIndex::Tracing | SearchIndex::InMemory => unreachable!(),
                 },
                 status: TaskStatus::now(),

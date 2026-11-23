@@ -27,7 +27,6 @@ const INBOX_ID: u32 = 0;
 const USING: &[&str] = &[
     "urn:ietf:params:jmap:core",
     "urn:ietf:params:jmap:mail",
-    "urn:ietf:params:jmap:contacts",
     "urn:inbuxa:jmap",
 ];
 
@@ -398,31 +397,6 @@ pub async fn test(test: &mut TestServer) {
     ranged_client.email_destroy(&inside).await.unwrap();
     ranged_client.email_destroy(&outside).await.unwrap();
 
-    // LH-3: a contact is held whole, whatever the range
-    let (_, books) = ranged
-        .hold_call("AddressBook/get", json!({"ids": null}))
-        .await;
-    let book = books["list"][0]["id"]
-        .as_str()
-        .unwrap_or_else(|| panic!("no address book: {books}"))
-        .to_string();
-    {
-        let (_, created) = ranged
-            .hold_call(
-                "ContactCard/set",
-                json!({"create": {"c": {"addressBookIds": {book: true},
-                    "name": {"full": "Kept Contact"}}}}),
-            )
-            .await;
-        let card = created["created"]["c"]["id"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
-        let (_, destroyed) = ranged
-            .hold_call("ContactCard/set", json!({"destroy": [card]}))
-            .await;
-        assert!(destroyed["destroyed"][0].is_string(), "{destroyed}");
-    }
     test.wait_for_tasks().await;
 
     let is_held = |item: &Value| {
@@ -445,11 +419,6 @@ pub async fn test(test: &mut TestServer) {
     assert!(
         !kept.iter().any(|i| i["subject"] == "Outside the range"),
         "LH-3: mail outside the range was kept, with undelete off: {kept:?}"
-    );
-    assert!(
-        kept.iter()
-            .any(|i| i["name"] == "Kept Contact" && is_held(i)),
-        "LH-3: a contact wasn't kept whole: {kept:?}"
     );
 
     // LH-6: placing a hold freezes what's already archived; LH-7: frozen

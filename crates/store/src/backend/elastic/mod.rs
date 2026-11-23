@@ -58,7 +58,6 @@ impl SearchField {
             }),
             SearchField::Id
             | SearchField::Email(EmailSearchField::SentAt | EmailSearchField::ReceivedAt)
-            | SearchField::Calendar(CalendarSearchField::Start)
             | SearchField::Tracing(TracingSearchField::QueueId | TracingSearchField::EventType) => {
                 json!({
                   "type": "long"
@@ -66,10 +65,6 @@ impl SearchField {
             }
             SearchField::Email(EmailSearchField::HasAttachment) => json!({
               "type": "boolean"
-            }),
-            SearchField::Calendar(CalendarSearchField::Uid)
-            | SearchField::Contact(ContactSearchField::Uid) => json!({
-              "type": "keyword",
             }),
             SearchField::Email(
                 EmailSearchField::From | EmailSearchField::To | EmailSearchField::Subject,
@@ -105,26 +100,6 @@ impl SearchField {
                 })
             }
             SearchField::Email(EmailSearchField::Body | EmailSearchField::Attachment)
-            | SearchField::Calendar(
-                CalendarSearchField::Title
-                | CalendarSearchField::Description
-                | CalendarSearchField::Location
-                | CalendarSearchField::Owner
-                | CalendarSearchField::Attendee,
-            )
-            | SearchField::Contact(
-                ContactSearchField::Member
-                | ContactSearchField::Kind
-                | ContactSearchField::Name
-                | ContactSearchField::Nickname
-                | ContactSearchField::Organization
-                | ContactSearchField::Email
-                | ContactSearchField::Phone
-                | ContactSearchField::OnlineService
-                | ContactSearchField::Address
-                | ContactSearchField::Note,
-            )
-            | SearchField::File(FileSearchField::Name | FileSearchField::Content)
             | SearchField::Tracing(TracingSearchField::Keywords) => json!({
               "type": "text"
             }),

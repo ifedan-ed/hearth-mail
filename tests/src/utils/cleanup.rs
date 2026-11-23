@@ -98,12 +98,7 @@ async fn store_destroy_sql_indexes(store: &Store) {
     #[cfg(any(feature = "postgres", feature = "mysql"))]
     {
         if store.is_pg_or_mysql() {
-            for index in [
-                SearchIndex::Email,
-                SearchIndex::Calendar,
-                SearchIndex::Contacts,
-                SearchIndex::Tracing,
-            ] {
+            for index in [SearchIndex::Email, SearchIndex::Tracing] {
                 #[cfg(feature = "postgres")]
                 let table = index.psql_table();
                 #[cfg(feature = "mysql")]

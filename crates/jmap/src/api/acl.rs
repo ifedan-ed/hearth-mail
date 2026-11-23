@@ -271,9 +271,9 @@ impl JmapAcl for Server {
     ) -> Result<(), ShareValidationError> {
         let previous = previous.collect::<RoaringBitmap>();
 
-        if grants.len() > self.core.groupware.max_shares_per_item {
+        if grants.len() > self.core.sharing.max_shares_per_item {
             return Err(ShareValidationError::MaxSharesExceeded(
-                self.core.groupware.max_shares_per_item,
+                self.core.sharing.max_shares_per_item,
             ));
         }
 

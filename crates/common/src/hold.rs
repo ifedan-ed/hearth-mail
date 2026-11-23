@@ -124,12 +124,6 @@ impl Server {
             };
             let size = match &item {
                 ArchivedItem::Email(email) => email.size,
-                ArchivedItem::FileNode(_) => match undelete_data::extra(data, id).await? {
-                    Some(inbuxa_features::undelete::data::Extra::FileNode { size, .. }) => {
-                        size as u64
-                    }
-                    _ => 0,
-                },
                 _ => 0,
             };
             for hold in holds.iter().filter(|h| h.scope.covers(member)) {
@@ -223,9 +217,6 @@ impl Server {
                 Some(keeping) => match &item {
                     ArchivedItem::Email(email) => {
                         keeping.covers(Some(email.received_at.timestamp().max(0) as u64))
-                    }
-                    ArchivedItem::CalendarEvent(event) => {
-                        keeping.covers_event(event.start_time.map(|t| t.timestamp().max(0) as u64))
                     }
                     _ => keeping.covers(None),
                 },

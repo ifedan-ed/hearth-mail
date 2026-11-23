@@ -32,8 +32,6 @@ mta-sts.example.org. IN CNAME mail.example.org.
 ua-auto-config.example.org. IN CNAME mail.example.org.
 example.org. IN MX 10 mx1.example.org.
 example.org. IN MX 20 mx2.example.org.
-_caldavs._tcp.example.org. IN SRV 0 1 443 mail.example.org.
-_carddavs._tcp.example.org. IN SRV 0 1 443 mail.example.org.
 _imaps._tcp.example.org. IN SRV 0 1 993 imap.example.org.
 _jmap._tcp.example.org. IN SRV 0 1 443 mail.example.org.
 _pop3s._tcp.example.org. IN SRV 0 1 995 pop3.example.org.

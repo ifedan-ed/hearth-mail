@@ -35,9 +35,6 @@ use types::id::Id;
 fn kind(item: &ArchivedItem) -> (ArchivedItemType, &'static str) {
     match item {
         ArchivedItem::Email(_) => (ArchivedItemType::Email, "Email"),
-        ArchivedItem::FileNode(_) => (ArchivedItemType::FileNode, "FileNode"),
-        ArchivedItem::CalendarEvent(_) => (ArchivedItemType::CalendarEvent, "CalendarEvent"),
-        ArchivedItem::ContactCard(_) => (ArchivedItemType::ContactCard, "ContactCard"),
         ArchivedItem::SieveScript(_) => (ArchivedItemType::SieveScript, "SieveScript"),
     }
 }
@@ -47,9 +44,6 @@ fn kind(item: &ArchivedItem) -> (ArchivedItemType, &'static str) {
 fn original_date(item: &ArchivedItem) -> UTCDateTime {
     match item {
         ArchivedItem::Email(item) => item.received_at,
-        ArchivedItem::FileNode(item) => item.created_at,
-        ArchivedItem::CalendarEvent(item) => item.created_at,
-        ArchivedItem::ContactCard(item) => item.created_at,
         ArchivedItem::SieveScript(item) => item.created_at,
     }
 }
@@ -58,9 +52,6 @@ fn original_date(item: &ArchivedItem) -> UTCDateTime {
 fn archived_at(item: &ArchivedItem) -> i64 {
     match item {
         ArchivedItem::Email(item) => item.archived_at,
-        ArchivedItem::FileNode(item) => item.archived_at,
-        ArchivedItem::CalendarEvent(item) => item.archived_at,
-        ArchivedItem::ContactCard(item) => item.archived_at,
         ArchivedItem::SieveScript(item) => item.archived_at,
     }
     .timestamp()
@@ -70,9 +61,6 @@ fn archived_at(item: &ArchivedItem) -> i64 {
 fn summary_text(item: &ArchivedItem) -> String {
     match item {
         ArchivedItem::Email(item) => format!("{} {}", item.from, item.subject),
-        ArchivedItem::FileNode(item) => item.name.clone(),
-        ArchivedItem::CalendarEvent(item) => item.title.clone(),
-        ArchivedItem::ContactCard(item) => item.name.clone().unwrap_or_default(),
         ArchivedItem::SieveScript(item) => item.name.clone(),
     }
     .to_lowercase()

@@ -57,83 +57,45 @@ pub async fn test(test: &TestServer) {
     assert!(found.contains(&john_id), "{response:?}");
     assert!(!found.contains(&jane_id), "{response:?}");
 
-    // Free/busy likewise
-    let availability = |id: &str| {
-        json!({
-            "accountId": john_id,
-            "id": id,
-            "utcStart": "2026-01-01T00:00:00Z",
-            "utcEnd": "2026-01-02T00:00:00Z",
-        })
-    };
-    assert_eq!(
-        john.jmap_method_call("Principal/getAvailability", availability(jane_id))
-            .await
-            .method_response()
-            .typ(),
-        "forbidden"
-    );
-    let response = john
-        .jmap_method_call("Principal/getAvailability", availability(john_id))
-        .await;
-    assert!(
-        response.method_response()["list"].is_array(),
-        "{response:?}"
-    );
-
     // Nobody new can be shared with, and an account that exists is refused the
     // same way as one that doesn't, so a grant can't be used to look anyone up
     let robert = test.account("robert@example.com");
     let robert_id = robert.id_string();
-    let calendar = first_id(john, "Calendar/get").await;
-    let book = first_id(john, "AddressBook/get").await;
     let inbox = first_id(john, "Mailbox/get").await;
-    for (object, id, rights) in [
-        (
-            "Calendar",
-            calendar.as_str(),
-            json!({ "mayReadFreeBusy": true }),
-        ),
-        ("AddressBook", book.as_str(), json!({ "mayRead": true })),
-        ("Mailbox", inbox.as_str(), json!({ "mayReadItems": true })),
-    ] {
-        for grantee in [jane_id, "zzzzzz"] {
-            let response = share(john, object, id, json!({ grantee: rights })).await;
-            assert_eq!(
-                response.not_updated(id)["type"],
-                "invalidForeignKey",
-                "{object} {grantee}: {response:?}"
-            );
-        }
+    for grantee in [jane_id, "zzzzzz"] {
+        let response = share(
+            john,
+            "Mailbox",
+            &inbox,
+            json!({ grantee: { "mayReadItems": true } }),
+        )
+        .await;
+        assert_eq!(
+            response.not_updated(&inbox)["type"],
+            "invalidForeignKey",
+            "Mailbox {grantee}: {response:?}"
+        );
     }
 
-    // Those already shared with stay usable. Jane and Robert get John's folder
-    // and Jane his calendar while the setting is on.
+    // Those already shared with stay usable. Jane and Robert get John's
+    // folder while the setting is on.
     set_directory_queries(test, true).await;
     let response = john
         .jmap_method_call(
-            "FileNode/set",
+            "Mailbox/set",
             json!({
                 "accountId": john_id,
                 "create": { "i0": {
                     "name": "Directory off",
                     "shareWith": {
-                        jane_id: { "mayRead": true, "mayAddChildren": true },
-                        robert_id: { "mayRead": true },
+                        jane_id: { "mayReadItems": true, "mayAddItems": true },
+                        robert_id: { "mayReadItems": true },
                     }
                 }}
             }),
         )
         .await;
     let folder = response.created(0).id().to_string();
-    let response = share(
-        john,
-        "Calendar",
-        &calendar,
-        json!({ jane_id: { "mayReadFreeBusy": true } }),
-    )
-    .await;
-    assert!(response.updated(&calendar).is_null(), "{response:?}");
     set_directory_queries(test, false).await;
 
     // John can name them, though he still can't list anyone or see the rest
@@ -161,23 +123,26 @@ pub async fn test(test: &TestServer) {
     // He can change what Jane has, and share something else with her
     let response = share(
         john,
-        "Calendar",
-        &calendar,
-        json!({ jane_id: { "mayReadFreeBusy": true, "mayReadItems": true } }),
+        "Mailbox",
+        &folder,
+        json!({
+            jane_id: { "mayReadItems": true, "mayAddItems": true, "maySetSeen": true },
+            robert_id: { "mayReadItems": true },
+        }),
     )
     .await;
-    assert!(response.updated(&calendar).is_null(), "{response:?}");
+    assert!(response.updated(&folder).is_null(), "{response:?}");
     let response = share(
         john,
-        "AddressBook",
-        &book,
-        json!({ jane_id: { "mayRead": true } }),
+        "Mailbox",
+        &inbox,
+        json!({ jane_id: { "mayReadItems": true } }),
     )
     .await;
-    assert!(response.updated(&book).is_null(), "{response:?}");
+    assert!(response.updated(&inbox).is_null(), "{response:?}");
 
-    // Jane knows John now, and can read his free/busy, but Robert isn't hers
-    // to see: she can't manage the folder they're both on
+    // Jane knows John now, but Robert isn't hers to see: she can't manage
+    // the folder they're both on
     let response = jane
         .jmap_method_call(
             "Principal/get",
@@ -189,42 +154,13 @@ pub async fn test(test: &TestServer) {
         [john_id],
         "{response:?}"
     );
-    let response = jane
-        .jmap_method_call(
-            "Principal/getAvailability",
-            json!({
-                "accountId": jane_id,
-                "id": john_id,
-                "utcStart": "2026-01-01T00:00:00Z",
-                "utcEnd": "2026-01-02T00:00:00Z",
-            }),
-        )
-        .await;
-    assert!(
-        response.method_response()["list"].is_array(),
-        "{response:?}"
-    );
-
-    // Something she makes in the folder inherits Robert, who isn't new to it
-    let response = jane
-        .jmap_method_call(
-            "FileNode/set",
-            json!({
-                "accountId": john_id,
-                "create": { "i0": { "name": "Inherited", "parentId": folder } }
-            }),
-        )
-        .await;
-    response.created(0);
 
     // Sharing can be taken away, and then Jane can't be named anymore
-    let response = share(john, "Calendar", &calendar, Value::Null).await;
-    assert!(response.updated(&calendar).is_null(), "{response:?}");
-    let response = share(john, "AddressBook", &book, Value::Null).await;
-    assert!(response.updated(&book).is_null(), "{response:?}");
+    let response = share(john, "Mailbox", &inbox, Value::Null).await;
+    assert!(response.updated(&inbox).is_null(), "{response:?}");
     john.jmap_method_call(
-        "FileNode/set",
-        json!({ "accountId": john_id, "destroy": [folder], "onDestroyRemoveChildren": true }),
+        "Mailbox/set",
+        json!({ "accountId": john_id, "destroy": [folder], "onDestroyRemoveEmails": true }),
     )
     .await;
     let response = john
@@ -273,10 +209,8 @@ pub async fn test(test: &TestServer) {
         "{response:?}"
     );
 
-    // Asking for free/busy and looking up who's shared with made these
+    // Looking up who's shared with made these
     for account in [john, jane] {
-        account.destroy_all_calendars().await;
-        account.destroy_all_addressbooks().await;
         test.destroy_all_mailboxes(account).await;
     }
     test.assert_is_empty().await;

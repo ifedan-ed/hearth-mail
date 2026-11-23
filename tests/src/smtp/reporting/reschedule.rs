@@ -276,7 +276,7 @@ async fn marker_task(server: &Server, due: u64) -> u64 {
     batch.schedule_task_with_id(
         id,
         Task::StoreMaintenance(TaskStoreMaintenance {
-            maintenance_type: TaskStoreMaintenanceType::RemoveLockDav,
+            maintenance_type: TaskStoreMaintenanceType::RemoveGreylist,
             shard_index: Some(0),
             status: TaskStatus::at(due as i64),
         }),

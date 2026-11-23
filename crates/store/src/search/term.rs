@@ -13,7 +13,6 @@ use crate::{
         SearchIndexId, SearchIndexType, ValueClass,
     },
 };
-use ahash::AHashSet;
 use nlp::{
     language::stemmer::Stemmer,
     tokenizers::{space::SpaceTokenizer, word::WordTokenizer},
@@ -247,96 +246,6 @@ impl TermIndex {
 
         Ok(())
     }
-
-    pub fn merge_index(
-        self,
-        batch: &mut BatchBuilder,
-        index: SearchIndex,
-        id: SearchIndexId,
-        old_term: &ArchivedTermIndex,
-    ) -> trc::Result<()> {
-        let archive = Archiver::new(self);
-        batch
-            .set(
-                ValueClass::SearchIndex(SearchIndexClass {
-                    index,
-                    id,
-                    typ: SearchIndexType::Document,
-                }),
-                archive.serialize()?,
-            )
-            .commit_point();
-
-        let mut old_terms = AHashSet::with_capacity(old_term.terms.len());
-        let mut old_fields = AHashSet::with_capacity(old_term.fields.len());
-        for term in old_term.terms.iter() {
-            let mut fields = term.fields.to_native();
-            while let Some(field) = fields.bit_pop() {
-                old_terms.insert(SearchIndexType::Term {
-                    hash: term.hash.to_native(),
-                    field,
-                });
-            }
-        }
-        for field in old_term.fields.iter() {
-            old_fields.insert(SearchIndexField {
-                field_id: field.field_id,
-                data: field.data.to_vec(),
-            });
-        }
-
-        for term in archive.inner.terms {
-            let mut fields = term.fields;
-            while let Some(field) = fields.bit_pop() {
-                let typ = SearchIndexType::Term {
-                    hash: term.hash,
-                    field,
-                };
-
-                if !old_terms.remove(&typ) {
-                    batch
-                        .set(
-                            ValueClass::SearchIndex(SearchIndexClass { index, id, typ }),
-                            vec![],
-                        )
-                        .commit_point();
-                }
-            }
-        }
-
-        for field in archive.inner.fields {
-            if !old_fields.remove(&field) {
-                batch
-                    .set(
-                        ValueClass::SearchIndex(SearchIndexClass {
-                            index,
-                            id,
-                            typ: SearchIndexType::Index { field },
-                        }),
-                        vec![],
-                    )
-                    .commit_point();
-            }
-        }
-
-        for typ in old_terms {
-            batch
-                .clear(ValueClass::SearchIndex(SearchIndexClass { index, id, typ }))
-                .commit_point();
-        }
-
-        for field in old_fields {
-            batch
-                .clear(ValueClass::SearchIndex(SearchIndexClass {
-                    index,
-                    id,
-                    typ: SearchIndexType::Index { field },
-                }))
-                .commit_point();
-        }
-
-        Ok(())
-    }
 }
 
 impl ArchivedTermIndex {
@@ -386,9 +295,6 @@ impl SearchIndex {
     pub(crate) fn as_u8(&self) -> u8 {
         match self {
             SearchIndex::Email => 0,
-            SearchIndex::Calendar => 1,
-            SearchIndex::Contacts => 2,
-            SearchIndex::File => 3,
             SearchIndex::Tracing => 4,
             SearchIndex::InMemory => unreachable!(),
         }
@@ -414,32 +320,6 @@ impl SearchField {
                 EmailSearchField::Size => 12,
                 EmailSearchField::HasAttachment => 13,
                 EmailSearchField::Headers => 14,
-            },
-            SearchField::Calendar(field) => match field {
-                CalendarSearchField::Title => 3,
-                CalendarSearchField::Description => 4,
-                CalendarSearchField::Location => 5,
-                CalendarSearchField::Owner => 6,
-                CalendarSearchField::Attendee => 7,
-                CalendarSearchField::Start => 8,
-                CalendarSearchField::Uid => 9,
-            },
-            SearchField::Contact(field) => match field {
-                ContactSearchField::Member => 3,
-                ContactSearchField::Kind => 4,
-                ContactSearchField::Name => 5,
-                ContactSearchField::Nickname => 6,
-                ContactSearchField::Organization => 7,
-                ContactSearchField::Email => 8,
-                ContactSearchField::Phone => 9,
-                ContactSearchField::OnlineService => 10,
-                ContactSearchField::Address => 11,
-                ContactSearchField::Note => 12,
-                ContactSearchField::Uid => 13,
-            },
-            SearchField::File(field) => match field {
-                FileSearchField::Name => 3,
-                FileSearchField::Content => 4,
             },
             SearchField::Tracing(field) => match field {
                 TracingSearchField::EventType => 3,

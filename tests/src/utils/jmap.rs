@@ -397,18 +397,12 @@ impl Account {
             "urn:ietf:params:jmap:mail",
             "urn:ietf:params:jmap:submission",
             "urn:ietf:params:jmap:vacationresponse",
-            "urn:ietf:params:jmap:contacts",
-            "urn:ietf:params:jmap:contacts:parse",
-            "urn:ietf:params:jmap:calendars",
-            "urn:ietf:params:jmap:calendars:parse",
             "urn:ietf:params:jmap:websocket",
             "urn:ietf:params:jmap:sieve",
             "urn:ietf:params:jmap:blob",
             "urn:ietf:params:jmap:quota",
             "urn:ietf:params:jmap:principals",
             "urn:ietf:params:jmap:principals:owner",
-            "urn:ietf:params:jmap:principals:availability",
-            "urn:ietf:params:jmap:filenode",
             "urn:ietf:params:jmap:mail:share",
             "urn:inbuxa:jmap:registry"
           ],
@@ -472,92 +466,6 @@ impl Account {
             )
             .unwrap(),
         )
-    }
-
-    pub async fn destroy_all_addressbooks(&self) {
-        self.jmap_method_calls(json!([[
-            "AddressBook/get",
-            {
-              "accountId": self.id_string(),
-              "ids" : (),
-              "properties" : [
-                "id"
-              ]
-            },
-            "R1"
-          ],
-          [
-            "AddressBook/set",
-            {
-              "accountId": self.id_string(),
-              "#destroy" : {
-                    "resultOf": "R1",
-                    "name": "AddressBook/get",
-                    "path": "/list/*/id"
-                },
-              "onDestroyRemoveContents" : true
-            },
-            "R2"
-          ]
-        ]))
-        .await;
-    }
-
-    pub async fn destroy_all_calendars(&self) {
-        self.jmap_method_calls(json!([[
-            "Calendar/get",
-            {
-              "accountId": self.id_string(),
-              "ids" : (),
-              "properties" : [
-                "id"
-              ]
-            },
-            "R1"
-          ],
-          [
-            "Calendar/set",
-            {
-              "accountId": self.id_string(),
-              "#destroy" : {
-                    "resultOf": "R1",
-                    "name": "Calendar/get",
-                    "path": "/list/*/id"
-                },
-              "onDestroyRemoveEvents" : true
-            },
-            "R2"
-          ]
-        ]))
-        .await;
-    }
-
-    pub async fn destroy_all_event_notifications(&self) {
-        self.jmap_method_calls(json!([[
-            "CalendarEventNotification/get",
-            {
-              "accountId": self.id_string(),
-              "ids" : (),
-              "properties" : [
-                "id"
-              ]
-            },
-            "R1"
-          ],
-          [
-            "CalendarEventNotification/set",
-            {
-              "accountId": self.id_string(),
-              "#destroy" : {
-                    "resultOf": "R1",
-                    "name": "CalendarEventNotification/get",
-                    "path": "/list/*/id"
-                }
-            },
-            "R2"
-          ]
-        ]))
-        .await;
     }
 }
 

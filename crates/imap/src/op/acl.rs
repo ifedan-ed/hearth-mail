@@ -432,7 +432,7 @@ impl<T: SessionStream> Session<T> {
                     .id(arguments.tag.to_string()));
             }
 
-            if mailbox.acls.len() > data.server.core.groupware.max_shares_per_item {
+            if mailbox.acls.len() > data.server.core.sharing.max_shares_per_item {
                 return Err(trc::ImapEvent::Error
                     .into_err()
                     .details("Maximum shares per item exceeded")

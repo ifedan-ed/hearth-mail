@@ -15,10 +15,7 @@ use std::{collections::HashSet, hash::Hash, time::SystemTime};
 use types::{
     blob_hash::BlobHash,
     collection::{Collection, SyncCollection, VanishedCollection},
-    field::{
-        CalendarEventField, CalendarNotificationField, ContactField, EmailField,
-        EmailSubmissionField, Field, MailboxField, PrincipalField, SieveField,
-    },
+    field::{EmailField, EmailSubmissionField, Field, MailboxField, PrincipalField, SieveField},
 };
 use utils::{
     cheeky_hash::CheekyHash,
@@ -254,9 +251,6 @@ pub enum TaskQueueClass {
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub enum SearchIndex {
     Email,
-    Calendar,
-    Contacts,
-    File,
     Tracing,
     InMemory,
 }
@@ -518,24 +512,6 @@ impl From<LogCollection> for u8 {
             LogCollection::Sync(col) => col as u8,
             LogCollection::Vanished(col) => col as u8,
         }
-    }
-}
-
-impl From<ContactField> for ValueClass {
-    fn from(value: ContactField) -> Self {
-        ValueClass::Property(value.into())
-    }
-}
-
-impl From<CalendarEventField> for ValueClass {
-    fn from(value: CalendarEventField) -> Self {
-        ValueClass::Property(value.into())
-    }
-}
-
-impl From<CalendarNotificationField> for ValueClass {
-    fn from(value: CalendarNotificationField) -> Self {
-        ValueClass::Property(value.into())
     }
 }
 

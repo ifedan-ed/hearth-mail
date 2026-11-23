@@ -50,20 +50,6 @@ async fn automation_tests() {
                 ]),
                 services: VecMap::from_iter([
                     (
-                        ServiceProtocol::Caldav,
-                        Service {
-                            cleartext: false,
-                            ..Default::default()
-                        },
-                    ),
-                    (
-                        ServiceProtocol::Carddav,
-                        Service {
-                            cleartext: false,
-                            ..Default::default()
-                        },
-                    ),
-                    (
                         ServiceProtocol::Imap,
                         Service {
                             cleartext: false,
@@ -96,13 +82,6 @@ async fn automation_tests() {
                         Service {
                             cleartext: false,
                             hostname: "smtp.example.org".to_string().into(),
-                        },
-                    ),
-                    (
-                        ServiceProtocol::Webdav,
-                        Service {
-                            cleartext: false,
-                            ..Default::default()
                         },
                     ),
                 ]),

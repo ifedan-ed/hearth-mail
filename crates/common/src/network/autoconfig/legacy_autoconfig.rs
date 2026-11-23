@@ -82,27 +82,9 @@ impl Server {
 
         config.push_str("\t</emailProvider>\n");
 
-        for (protocol, service) in &self.core.network.info.services {
-            let (tag, protocol, url) = match protocol {
-                ServiceProtocol::Carddav => ("addressBook", "carddav", "card"),
-                ServiceProtocol::Caldav => ("calendar", "caldav", "cal"),
-                ServiceProtocol::Webdav => ("fileShare", "webdav", "file"),
-                _ => continue,
-            };
-            let server_name = service.hostname.as_deref().unwrap_or(default_host);
-
-            let _ = writeln!(&mut config, "\t<{tag} type=\"{protocol}\">");
-            let _ = writeln!(&mut config, "\t\t<username>{emailaddress}</username>");
-            let _ = writeln!(
-                &mut config,
-                "\t\t<authentication>http-basic</authentication>"
-            );
-            let _ = writeln!(
-                &mut config,
-                "\t\t<serverURL>https://{server_name}/dav/{url}</serverURL>"
-            );
-            let _ = writeln!(&mut config, "\t</{tag}>");
-        }
+        // Calendars, address books and file shares are not offered here:
+        // Hearth Mail serves mail only (docs/integration.md covers pointing
+        // clients at Nextcloud or Hearth for those).
 
         let _ = writeln!(
             &mut config,

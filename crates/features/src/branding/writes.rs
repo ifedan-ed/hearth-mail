@@ -4,15 +4,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-//! What a registry write may set for a logo or template (BT-3, BT-15,
-//! BT-22). Only a changed value is checked, so data from before the fork
+//! What a registry write may set for a logo (BT-3). Only a changed value is checked, so data from before the fork
 //! never blocks an unrelated change (BT-4).
 
-use crate::branding::{logo, templates};
+use crate::branding::logo;
 use jmap_proto::error::set::SetError;
 use registry::schema::prelude::{Object, ObjectInner, Property};
 
-/// The logo and template fields an object carries, with their checks.
+/// The logo fields an object carries, with their checks.
 fn fields(inner: &ObjectInner) -> Vec<(Property, Option<&str>, fn(&str) -> Result<(), String>)> {
     match inner {
         ObjectInner::Enterprise(o) => vec![
@@ -32,21 +31,6 @@ fn fields(inner: &ObjectInner) -> Vec<(Property, Option<&str>, fn(&str) -> Resul
             (Property::LogoDark, o.logo_dark.as_deref(), logo::check),
         ],
         ObjectInner::OAuthClient(o) => vec![(Property::Logo, o.logo.as_deref(), logo::check)],
-        ObjectInner::CalendarAlarm(o) => {
-            vec![(Property::Template, o.template.as_deref(), templates::check)]
-        }
-        ObjectInner::CalendarScheduling(o) => vec![
-            (
-                Property::EmailTemplate,
-                o.email_template.as_deref(),
-                templates::check,
-            ),
-            (
-                Property::HttpRsvpTemplate,
-                o.http_rsvp_template.as_deref(),
-                templates::check_page,
-            ),
-        ],
         _ => vec![],
     }
 }

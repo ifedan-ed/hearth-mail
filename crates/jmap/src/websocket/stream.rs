@@ -237,13 +237,6 @@ impl WebSocketHandler for Server {
                                     ));
                                 }
                             },
-                            PushNotification::CalendarAlert(calendar_alert) => {
-                                if change_types.contains(DataType::CalendarAlert) {
-                                    notifications.push(PushNotification::CalendarAlert(
-                                        calendar_alert
-                                    ));
-                                }
-                            },
                         }
 
                     } else {

@@ -12,8 +12,6 @@ use email::{
     cache::MessageCacheFetch,
     message::metadata::{MESSAGE_RECEIVED_MASK, MessageMetadata},
 };
-use groupware::{cache::GroupwareCache, calendar::CalendarEvent, contact::ContactCard};
-use inbuxa_features::undelete;
 use registry::{
     schema::{
         enums::IndexDocumentType,
@@ -34,16 +32,14 @@ use store::{
 };
 use trc::{AddContext, TaskManagerEvent};
 use types::blob_hash::BlobHash;
-use types::{
-    collection::{Collection, SyncCollection},
-    field::EmailField,
-};
+use types::{collection::Collection, field::EmailField};
 
 pub(crate) trait SearchIndexTask: Sync + Send {
     fn index(&self, tasks: &[TaskDetails]) -> impl Future<Output = Vec<IndexTaskResult>> + Send;
 }
 
-const NUM_INDEXES: usize = 5;
+// Deletion buckets: 0 for email, 1 for tracing documents (deleted elsewhere).
+const NUM_INDEXES: usize = 2;
 const MISSING_DOCUMENT_MAX_ATTEMPTS: u64 = 3;
 const MISSING_DOCUMENT_RETRY_DELAY: u64 = 5;
 
@@ -83,12 +79,6 @@ impl SearchIndexTask for Server {
                     let document = match task.document_type {
                         IndexDocumentType::Email => {
                             build_email_document(self, account_id, document_id).await
-                        }
-                        IndexDocumentType::Calendar => {
-                            build_calendar_document(self, account_id, document_id).await
-                        }
-                        IndexDocumentType::Contacts => {
-                            build_contact_document(self, account_id, document_id).await
                         }
                         IndexDocumentType::File => {
                             // File indexing not implemented yet. inbuxa: still
@@ -217,35 +207,9 @@ impl SearchIndexTask for Server {
                             }
                             0
                         }
-                        IndexDocumentType::Calendar => 1,
-                        IndexDocumentType::Contacts => 2,
-                        IndexDocumentType::File => 3,
+                        // Tracing documents are removed by their own path.
+                        IndexDocumentType::File => 1,
                     };
-                    // inbuxa: UD-1: a noted file, event or contact is archived
-                    if let Some(kind) = match task.document_type {
-                        IndexDocumentType::Calendar => {
-                            Some(undelete::groupware::Kind::CalendarEvent)
-                        }
-                        IndexDocumentType::Contacts => Some(undelete::groupware::Kind::ContactCard),
-                        IndexDocumentType::File => Some(undelete::groupware::Kind::File),
-                        IndexDocumentType::Email => None,
-                    } && let Err(err) = archive_noted(self, kind, account_id, document_id).await
-                    {
-                        // inbuxa: LH-5: the note stays, so the retry archives
-                        // it; nothing a hold keeps is lost to a failure
-                        trc::error!(
-                            err.account_id(account_id)
-                                .document_id(document_id)
-                                .details("Failed to archive a deleted item")
-                        );
-                        results.push(IndexTaskResult {
-                            task_type: TaskType::Delete,
-                            index: task.document_type,
-                            result: TaskResult::temporary("Failed to archive a deleted item"),
-                        });
-                        continue;
-                    }
-
                     document_deletions[idx]
                         .entry(account_id)
                         .or_default()
@@ -299,11 +263,7 @@ impl SearchIndexTask for Server {
         }
 
         // Delete documents
-        for (accounts, index) in document_deletions.into_iter().zip([
-            SearchIndex::Email,
-            SearchIndex::Calendar,
-            SearchIndex::Contacts,
-        ]) {
+        for (accounts, index) in document_deletions.into_iter().zip([SearchIndex::Email]) {
             let multi_account = match accounts.len().cmp(&1) {
                 Ordering::Greater => true,
                 Ordering::Equal => false,
@@ -424,35 +384,6 @@ pub(crate) async fn reindex_account(server: &Server, account_id: u32) -> trc::Re
         }
     }
 
-    for document_type in [IndexDocumentType::Calendar, IndexDocumentType::Contacts] {
-        let cache = server
-            .fetch_dav_resources(
-                account_id,
-                account_id,
-                if document_type == IndexDocumentType::Calendar {
-                    SyncCollection::Calendar
-                } else {
-                    SyncCollection::AddressBook
-                },
-            )
-            .await
-            .caused_by(trc::location!())?;
-
-        for document_id in cache.document_ids(false) {
-            batch.schedule_task(Task::IndexDocument(TaskIndexDocument {
-                account_id: account_id.into(),
-                document_id: document_id.into(),
-                document_type,
-                status: TaskStatus::at(now + rand::rng().random_range(0..=300)),
-            }));
-
-            if batch.is_large_batch() {
-                server.core.storage.data.write(batch.build_all()).await?;
-                batch = BatchBuilder::new();
-            }
-        }
-    }
-
     if !batch.is_empty() {
         server.core.storage.data.write(batch.build_all()).await?;
     }
@@ -517,73 +448,6 @@ async fn build_email_document(
     }
 }
 
-async fn build_calendar_document(
-    server: &Server,
-    account_id: u32,
-    document_id: u32,
-) -> trc::Result<BuildResult> {
-    let Some(index_fields) = server.core.email.index_fields.get(&SearchIndex::Calendar) else {
-        return Ok(BuildResult::NotIndexed);
-    };
-
-    match server
-        .store()
-        .get_value::<Archive<AlignedBytes>>(ValueKey::archive(
-            account_id,
-            Collection::CalendarEvent,
-            document_id,
-        ))
-        .await?
-    {
-        Some(metadata_) => Ok(BuildResult::Document(
-            metadata_
-                .unarchive::<CalendarEvent>()
-                .caused_by(trc::location!())?
-                .index_document(
-                    account_id,
-                    document_id,
-                    index_fields,
-                    server.core.email.default_language,
-                ),
-        )),
-        None => Ok(BuildResult::NotFound),
-    }
-}
-
-async fn build_contact_document(
-    server: &Server,
-    account_id: u32,
-    document_id: u32,
-) -> trc::Result<BuildResult> {
-    let Some(index_fields) = server.core.email.index_fields.get(&SearchIndex::Contacts) else {
-        return Ok(BuildResult::NotIndexed);
-    };
-
-    match server
-        .store()
-        .get_value::<Archive<AlignedBytes>>(ValueKey::archive(
-            account_id,
-            Collection::ContactCard,
-            document_id,
-        ))
-        .await?
-    {
-        Some(metadata_) => Ok(BuildResult::Document(
-            metadata_
-                .unarchive::<ContactCard>()
-                .caused_by(trc::location!())?
-                .index_document(
-                    account_id,
-                    document_id,
-                    index_fields,
-                    server.core.email.default_language,
-                ),
-        )),
-        None => Ok(BuildResult::NotFound),
-    }
-}
-
-// inbuxa: MON-16: a trace's search document, when trace search is on
 async fn build_tracing_span_document(
     server: &Server,
     span_id: u64,
@@ -706,60 +570,6 @@ pub fn trace_search_document(
         }
     }
     document
-}
-
-// inbuxa: UD-1, UD-4, LH-4: archives a deleted file, event or contact noted
-// at deletion, when archiving is on or a hold covers it; otherwise its note is
-// dropped. The note goes only once the item is archived.
-async fn archive_noted(
-    server: &Server,
-    kind: undelete::groupware::Kind,
-    account_id: u32,
-    document_id: u32,
-) -> trc::Result<()> {
-    let data = &server.core.storage.data;
-    let Some(note) = undelete::groupware::peek(data, kind, account_id, document_id).await? else {
-        return Ok(());
-    };
-    // LH-3: events by their start; contacts and files whole
-    let keeping = server.keeping(account_id).await?;
-    let held = match kind {
-        undelete::groupware::Kind::CalendarEvent => {
-            keeping.covers_event(undelete::groupware::event_start(&note))
-        }
-        _ => keeping.covers(None),
-    };
-    let now = store::write::now();
-    let Some(until) = keeping.until(now, held) else {
-        return undelete::groupware::clear(data, kind, account_id, document_id).await;
-    };
-    let retention = until.saturating_sub(now);
-    let blob_hash = match (&note.content, &note.blob_hash) {
-        (Some(text), _) => {
-            server
-                .put_temporary_blob(account_id, text.as_bytes(), 600)
-                .await?
-                .0
-        }
-        (None, Some(hash)) => BlobHash::try_from_hash_slice(hash).map_err(|_| {
-            trc::StoreEvent::DataCorruption
-                .into_err()
-                .details("Invalid blob hash in undelete note")
-        })?,
-        (None, None) => {
-            return undelete::groupware::clear(data, kind, account_id, document_id).await;
-        }
-    };
-    undelete::groupware::archive(
-        data,
-        server.registry(),
-        account_id,
-        note,
-        blob_hash,
-        retention,
-    )
-    .await?;
-    undelete::groupware::clear(data, kind, account_id, document_id).await
 }
 
 async fn delete_email_metadata(
