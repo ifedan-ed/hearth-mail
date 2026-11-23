@@ -427,6 +427,25 @@ impl<P: ConnectionProvider> PoolState<P> {
                     NetError::Busy => busy.push(server),
                     // If the connection failed or timed out, try another one.
                     NetError::Io(_) | NetError::NoConnections | NetError::Timeout => {}
+                    // Hearth Mail: some forwarders answer SERVFAIL, rather than a
+                    // truncated reply, when the answer doesn't fit the UDP buffer the
+                    // query offered. Docker's embedded resolver (127.0.0.11) does this,
+                    // so a DNSKEY set over 1232 bytes failed every DNSSEC check made
+                    // through it. With `try_tcp_on_error`, ask the same server once
+                    // more over TCP, where the size is no limit.
+                    NetError::Dns(DnsError::NoRecordsFound(NoRecords {
+                        response_code: ResponseCode::ServFail,
+                        ..
+                    })) if self.cx.options.try_tcp_on_error
+                        && !sent_policy.disable_udp
+                        && server.protocols().any(|p| p != Protocol::Udp) =>
+                    {
+                        debug!("SERVFAIL over UDP, retrying over TCP");
+                        policy.disable_udp = true;
+                        servers.push_front(server);
+                        err = Some(e);
+                        continue;
+                    }
                     // If we got an `NXDomain` response from a server whose negative responses we
                     // don't trust, we should try another server.
                     NetError::Dns(DnsError::NoRecordsFound(NoRecords {
@@ -2185,6 +2204,105 @@ mod tests {
             "server should not be retried more than once after TCP truncation, got {} queries",
             queries.len()
         );
+    }
+
+    /// Hearth Mail: a server that answers SERVFAIL over UDP but answers over
+    /// TCP (Docker's embedded resolver, for replies bigger than the UDP
+    /// buffer) is asked again over TCP when `try_tcp_on_error` is set.
+    #[tokio::test]
+    async fn test_servfail_udp_retried_over_tcp() {
+        subscribe();
+
+        let server_ip = IpAddr::from([10, 0, 0, 1]);
+        let query_name = Name::from_str("example.com.").unwrap();
+
+        let responses = vec![MockRecord::a(server_ip, &query_name, server_ip)];
+        let handler = MockNetworkHandler::new(responses).with_mutation(Box::new(
+            |_destination: IpAddr, protocol: Protocol, msg: &mut Message| {
+                if protocol == Protocol::Udp {
+                    msg.metadata.response_code = ResponseCode::ServFail;
+                    msg.answers.clear();
+                }
+            },
+        ));
+        let provider = MockProvider::new(handler);
+
+        let opts = ResolverOpts {
+            num_concurrent_reqs: 1,
+            server_ordering_strategy: ServerOrderingStrategy::UserProvidedOrder,
+            try_tcp_on_error: true,
+            ..ResolverOpts::default()
+        };
+
+        let pool = NameServerPool::from_nameservers(
+            vec![Arc::new(NameServer::new(
+                [].into_iter(),
+                NameServerConfig::udp_and_tcp(server_ip),
+                &opts,
+                provider.clone(),
+            ))],
+            Arc::new(PoolContext::new(opts, TlsConfig::new().unwrap())),
+        );
+
+        let result = pool
+            .lookup(
+                Query::query(query_name.clone(), RecordType::A),
+                DnsRequestOptions::default(),
+            )
+            .first_answer()
+            .await;
+
+        let response = result.expect("the TCP retry should answer");
+        assert_eq!(response.answers.len(), 1);
+        assert_eq!(provider.queries(&server_ip).len(), 2);
+    }
+
+    /// Without `try_tcp_on_error`, a SERVFAIL over UDP stays the answer.
+    #[tokio::test]
+    async fn test_servfail_udp_kept_without_tcp_on_error() {
+        subscribe();
+
+        let server_ip = IpAddr::from([10, 0, 0, 1]);
+        let query_name = Name::from_str("example.com.").unwrap();
+
+        let responses = vec![MockRecord::a(server_ip, &query_name, server_ip)];
+        let handler = MockNetworkHandler::new(responses).with_mutation(Box::new(
+            |_destination: IpAddr, protocol: Protocol, msg: &mut Message| {
+                if protocol == Protocol::Udp {
+                    msg.metadata.response_code = ResponseCode::ServFail;
+                    msg.answers.clear();
+                }
+            },
+        ));
+        let provider = MockProvider::new(handler);
+
+        let opts = ResolverOpts {
+            num_concurrent_reqs: 1,
+            server_ordering_strategy: ServerOrderingStrategy::UserProvidedOrder,
+            try_tcp_on_error: false,
+            ..ResolverOpts::default()
+        };
+
+        let pool = NameServerPool::from_nameservers(
+            vec![Arc::new(NameServer::new(
+                [].into_iter(),
+                NameServerConfig::udp_and_tcp(server_ip),
+                &opts,
+                provider.clone(),
+            ))],
+            Arc::new(PoolContext::new(opts, TlsConfig::new().unwrap())),
+        );
+
+        let result = pool
+            .lookup(
+                Query::query(query_name.clone(), RecordType::A),
+                DnsRequestOptions::default(),
+            )
+            .first_answer()
+            .await;
+
+        assert!(result.is_err(), "expected the SERVFAIL, got: {result:?}");
+        assert_eq!(provider.queries(&server_ip).len(), 1);
     }
 
     /// A late truncated UDP response must not abort a concurrent TCP retry.
