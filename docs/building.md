@@ -4,9 +4,9 @@
 
 ci/builder.Dockerfile is the one build environment for local builds, tests
 and CI: rust:1.100.0-trixie pinned by digest, clang and libclang-19 (bindgen
-for RocksDB and the other C libraries), cmake, Python (the schema tools) and
-Node (for CI's cache action). It is built on first use as
-`hearth-mail-builder:2`; bump the tag when it changes.
+for RocksDB and the other C libraries), cmake and Python (the schema
+tools). It is built on first use as
+`hearth-mail-builder:3`; bump the tag when it changes.
 
 ci/cargo.sh runs cargo in it:
 
@@ -61,21 +61,20 @@ job, no Docker socket in jobs; /srv/forgejo/runner/README.md).
 
 - checks: formatting, the console schema and privacy catalog, the release
   helper's tests.
-- build-test: the server build, the library tests, and the integration
-  suites compiled.
+- build-unit: the server build and the library tests.
 - integration: the integration suites that need nothing but a store on
-  disk (all but automation, directory and cluster), from the build job's
-  cache.
+  disk (all but automation, directory, cluster and, until its upstream
+  failure is understood, imap).
 
-The jobs run in hearth-mail-builder:2, which dind can't build. Load it after
+The jobs run in hearth-mail-builder:3, which dind can't build. Load it after
 every change of the builder (and after dind's images are wiped):
 
-    ci/cargo.sh --version >/dev/null   # builds hearth-mail-builder:2 if missing
-    docker save hearth-mail-builder:2 | docker exec -i -e DOCKER_HOST=unix:///run/user/1000/docker.sock forgejo-runner-dind docker load
+    ci/cargo.sh --version >/dev/null   # builds hearth-mail-builder:3 if missing
+    docker save hearth-mail-builder:3 | docker exec -i -e DOCKER_HOST=unix:///run/user/1000/docker.sock forgejo-runner-dind docker load
 
-Cargo's registry and target directory are cached between runs by the
-runner (actions/cache, key: Cargo.lock), so only the first run after a
-dependency change compiles everything.
+There is no build cache: the jobs use no actions (fetching actions/cache
+from code.forgejo.org hung and failed the first run), so each job builds
+from scratch, split so each fits the runner's hour.
 
 ## Results
 

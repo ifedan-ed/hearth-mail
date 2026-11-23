@@ -19,7 +19,7 @@
 #   HM_MEM=24g ci/cargo.sh build -p inbuxa --release --locked
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-image="${HM_IMAGE:-hearth-mail-builder:2}"
+image="${HM_IMAGE:-hearth-mail-builder:3}"
 docker image inspect "$image" >/dev/null 2>&1 ||
   docker build -q -t "$image" -f "$root/ci/builder.Dockerfile" "$root/ci" >/dev/null
 
