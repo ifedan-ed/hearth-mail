@@ -19,8 +19,10 @@ What goes:
 
 Usage: tools/hearth/strip-schema.py [--base REV] [--check]
   --base   the commit the features were removed from (default: the
-           recorded upstream base, v27.1-rc.39)
-  --check  exit 1 if the schema still has anything to remove (CI)
+           recorded upstream base, v27.1-rc.39); the schema is built from
+           that commit's schema each time, so the result never depends on
+           an earlier run
+  --check  exit 1 if the schema in the tree isn't what this builds (CI)
 The checksum file next to the schema is rewritten with it.
 """
 import argparse
@@ -55,8 +57,19 @@ HIDDEN_FIELDS = {
     'x:Jmap': {'parseLimitEvent', 'parseLimitContact'},
     'x:Search': {'indexCalendar', 'indexCalendarFields', 'indexContacts', 'indexContactFields'},
     'x:DataRetention': {'expungeSchedulingInboxAfter'},
-    'x:SpamSettings': {'trustContacts'},
-    'x:SpamClassifier': {'learnHamFromCard'},
+}
+
+
+# Descriptions that change meaning in Hearth Mail: the contacts are asked of
+# Nextcloud or Hearth rather than read from address books kept here.
+DESCRIPTIONS = {
+    ('x:SpamSettings', 'trustContacts'):
+        "Never classify messages as spam if the sender is in the recipient's contacts. "
+        'The contacts are asked of Nextcloud or Hearth (INBUXA_CONTACTS_LOOKUP_URL and '
+        'INBUXA_CONTACTS_LOOKUP_SECRET); without those set, nothing is asked.',
+    ('x:SpamClassifier', 'learnHamFromCard'):
+        "Learn as ham the messages let through because the sender is in the recipient's "
+        'contacts (see trustContacts).',
 }
 
 
@@ -136,6 +149,8 @@ def strip(schema, gone):
                 section['fields'] = [f for f in section.get('fields', [])
                                      if f.get('name') not in props]
             form['sections'] = [s for s in form.get('sections', []) if s.get('fields')]
+    for (obj, prop), text in DESCRIPTIONS.items():
+        schema['fields'][obj]['properties'][prop]['description'] = text
     # Defaults keyed by a removed enum value (the CalDAV, CardDAV and WebDAV
     # service entries of x:SystemSettings)
     for fields in schema['fields'].values():
@@ -159,16 +174,18 @@ def main():
     ap.add_argument('--base', default='v27.1-rc.39')
     ap.add_argument('--check', action='store_true')
     args = ap.parse_args()
-    raw = gzip.decompress(SCHEMA.read_bytes())
-    schema = json.loads(raw)
+    base = subprocess.check_output(['git', 'show', f'{args.base}:resources/schema/schema.json.gz'],
+                                   cwd=ROOT)
+    schema = json.loads(gzip.decompress(base))
     before = json.dumps(schema, sort_keys=True)
     gone = removed_names(args.base)
     schema = strip(schema, gone)
     after = json.dumps(schema, sort_keys=True)
     if args.check:
-        if before != after:
-            print('resources/schema/schema.json.gz still has removed features; '
-                  'run tools/hearth/strip-schema.py', file=sys.stderr)
+        current = json.loads(gzip.decompress(SCHEMA.read_bytes()))
+        if json.dumps(current, sort_keys=True) != after:
+            print('resources/schema/schema.json.gz is not what tools/hearth/strip-schema.py '
+                  'builds; run it', file=sys.stderr)
             sys.exit(1)
         return
     # Same encoding as tools/fork/expr-schema.py, so the two agree on the
