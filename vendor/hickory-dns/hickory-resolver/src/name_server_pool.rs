@@ -433,10 +433,13 @@ impl<P: ConnectionProvider> PoolState<P> {
                     // so a DNSKEY set over 1232 bytes failed every DNSSEC check made
                     // through it. With `try_tcp_on_error`, ask the same server once
                     // more over TCP, where the size is no limit.
-                    NetError::Dns(DnsError::NoRecordsFound(NoRecords {
-                        response_code: ResponseCode::ServFail,
-                        ..
-                    })) if self.cx.options.try_tcp_on_error
+                    NetError::Dns(
+                        DnsError::ResponseCode(ResponseCode::ServFail)
+                        | DnsError::NoRecordsFound(NoRecords {
+                            response_code: ResponseCode::ServFail,
+                            ..
+                        }),
+                    ) if self.cx.options.try_tcp_on_error
                         && !sent_policy.disable_udp
                         && server.protocols().any(|p| p != Protocol::Udp) =>
                     {
