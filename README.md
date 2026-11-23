@@ -17,7 +17,13 @@ taken out. It is maintained on its own from that point.
 - DKIM, SPF, DMARC and ARC checks and signing; DMARC and TLS reports, sent
   and received.
 - Sieve filters and vacation replies, managed over ManageSieve or JMAP.
-- A spam filter with rules, DNS blocklists and a learned model.
+- A spam filter with rules, DNS blocklists and a learned model. Mail from
+  a sender in the recipient's contacts (in Nextcloud or Hearth) can skip
+  the spam folder.
+- Meeting invitations are tagged with the `$itip` keyword, so any client
+  can list them (IMAP `SEARCH KEYWORD $itip`, JMAP `hasKeyword`).
+- Its own validating DNS resolver in the Compose and Helm examples, for
+  DNSSEC, DANE and DNS blocklists.
 - Many users, groups, shared mailboxes, domains and tenants; mailing lists
   and masked addresses.
 - Sign-in with passwords, app passwords, passkeys, OAuth and OpenID
@@ -40,6 +46,12 @@ SRV records). JMAP clients use `https://<host>/.well-known/jmap`.
 
 ## Running
 
+Two ready examples, each with PostgreSQL, the admin console and Unbound as
+the server's DNS resolver:
+
+- Docker Compose: deploy/compose (start with its README).
+- Kubernetes: the Helm chart in deploy/helm/hearth-mail (deploy/helm/README.md).
+
 The container image runs as user 2000 and works with a read-only root:
 
     docker run -d --name hearth-mail --read-only --tmpfs /tmp \
@@ -51,6 +63,15 @@ The container image runs as user 2000 and works with a read-only root:
 Settings are read from `INBUXA_*` environment variables and from the store
 named in `/etc/inbuxa/config.json`. The first start without a store opens a
 setup page on port 8080.
+
+Environment settings added by Hearth Mail:
+
+- `INBUXA_CONTACTS_LOOKUP_URL` and `INBUXA_CONTACTS_LOOKUP_SECRET` (or
+  `INBUXA_CONTACTS_LOOKUP_SECRET_FILE`): where the spam filter asks whether
+  a sender is in the recipient's contacts. Both or neither. With Nextcloud
+  this is the Tidings app's `/apps/tidings/api/contacts/known`
+  (docs/integration.md, section 1b). The spam settings' "Trust contacts"
+  switch turns the check off.
 
 The admin console is a separate program,
 [inbuxa Admin](https://git.coffeylabs.org/inbuxa/inbuxa-admin). It builds its

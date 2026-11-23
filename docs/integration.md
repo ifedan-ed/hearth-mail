@@ -1,6 +1,7 @@
 # Integration with Nextcloud and Hearth
 
-Status: plan, nothing built. Hearth Mail serves mail only; contacts,
+Status: sections 1b and 2 (the $itip keyword) are built; the rest is a
+plan. Hearth Mail serves mail only; contacts,
 calendars and files live in Nextcloud (cloud.example.org) now and in Hearth
 later. This page says how the pieces meet. Each part works with Hearth Mail
 alone too: a standard mail client never needs any of it.
@@ -38,18 +39,40 @@ a. In the mail apps (no server change)
   add them from the user's Sent mail (JMAP `Email/query` on the Sent
   mailbox, `to`/`cc` properties), cached on their side.
 
-b. In Hearth Mail itself (optional, for the spam filter)
-- The spam filter used to trust a sender found in the recipient's own
-  address book (`card-exists`). To bring it back without a contact store
-  here: one setting, the URL of a contacts lookup service
-  (`x:SpamSettings`, a new `contactsLookupUrl`), off when empty.
-- The lookup is `POST {url}` with `{"account": "<address>", "sender":
-  "<address>"}` and a service token, answering `{"known": true|false}`;
-  Hearth implements it over its contacts, and a small Nextcloud app (or a
-  Tidings endpoint, which already has `ContactsService`) over Nextcloud's.
-  One answer per (account, sender) cached for 10 minutes; a 300 ms
-  timeout; any failure means "not known" (the message is scored as now,
-  never trusted by mistake).
+b. In Hearth Mail itself (optional, for the spam filter). Built.
+- The spam filter trusts a sender found in the recipient's contacts
+  (`X-Spam-Status: No, reason=card-exists`), as Stalwart did with its own
+  address books. The contacts are asked of the cloud that keeps them.
+- Settings: `INBUXA_CONTACTS_LOOKUP_URL` and the secret
+  (`INBUXA_CONTACTS_LOOKUP_SECRET_FILE` pointing at a secrets file, or
+  `INBUXA_CONTACTS_LOOKUP_SECRET`). Both or neither; one alone is a
+  warning in the console and the lookup stays off. The spam settings'
+  "Trust contacts" switch (`x:SpamSettings.trustContacts`) turns it off
+  without removing them; "Learn ham from contacts"
+  (`x:SpamClassifier.learnHamFromCard`) trains such mail as ham.
+- The contract: `POST {url}`, `Authorization: Bearer <secret>`, body
+  `{"account": "<mailbox address>", "sender": "<address>"}`, answer
+  `{"known": true}` or `{"known": false}`. Code:
+  crates/common/src/contacts_lookup.rs.
+- When it's asked: only for mail the filter scored as spam, delivered over
+  SMTP or LMTP, whose sender is verified (signed in, or the From domain
+  passed DMARC), and not the recipient's own address. Nothing else waits
+  on it.
+- Never in the way of delivery: one answer per (account, sender) cached
+  for 10 minutes; a 300 ms timeout; any failure (timeout, refused, wrong
+  status, bad body) means "not known", so the message is scored as it
+  would be without the lookup, and one log line says so
+  (`spam.classify`, "Contacts lookup failed; scored without it").
+- Nextcloud: the Tidings app answers it at
+  `https://<cloud>/apps/tidings/api/contacts/known` (branch
+  `contacts-known` of Tidings). A mailbox's owners are the users who added
+  it as a Tidings account, and the user whose Nextcloud email it is; their
+  own and shared address books are searched through Nextcloud's CardDAV
+  backend for the exact address. Its secret is set with
+  `occ config:app:set tidings contacts_lookup_secret --value=<secret>
+  --sensitive --lazy`; without one every call is refused, a wrong one is
+  throttled. The same secret goes in Hearth Mail's secrets file.
+- Hearth: the same endpoint over its contacts service, when it has one.
 - Why not CardDAV from Hearth Mail: it would need every user's app
   password stored here and an address-book query per incoming message.
 
@@ -77,10 +100,34 @@ untouched. Nothing is written to any calendar by the mail server.
   calendar service, in Go; the parsing and the reply builder are shared by
   the mail screens and Hearth's calendar (which sends its own invitations
   through Hearth Mail's SMTP submission or JMAP).
-- Optional help from Hearth Mail: a Sieve rule (`header :contains
-  "Content-Type" "text/calendar"` → `addflag "$calendar"`) could tag such
-  mail so the apps find it with a keyword query. Open question in
-  docs/decisions.md.
+- Hearth Mail tags every delivered invitation with the keyword `$itip`
+  (built; see "The $itip keyword" below), so the apps can list
+  invitations with one query and need not read every message's structure.
+
+### The $itip keyword
+
+- Set on mail delivered to a mailbox (SMTP, LMTP) that has a
+  `text/calendar` part with a `method` parameter: an iTIP message (RFC
+  5546: REQUEST, REPLY, CANCEL, COUNTER and the rest) sent by iMIP (RFC
+  6047). A plain `.ics` file attached without `method` is not tagged, nor
+  is mail the spam filter files as spam. Code: `is_itip_message` in
+  crates/email/src/message/ingest.rs; the name is `ITIP_KEYWORD` in
+  crates/types/src/keyword.rs.
+- Why this name: `$` keywords are the client-agreed kind (RFC 5788 lists
+  `$Forwarded`, `$Junk`, `$MDNSent`...), and "iTIP" is the standard's own
+  name for scheduling messages. Nothing else in the registry uses it.
+- An ordinary keyword: IMAP shows it as a flag (`FETCH FLAGS`), finds it
+  with `SEARCH KEYWORD $itip`, and a client may remove it with
+  `STORE -FLAGS ($itip)` (for "handled"); JMAP has it in `keywords` and
+  finds it with the filter `{"hasKeyword": "$itip"}`.
+- Cheap to search: keyword queries are answered from the per-account
+  message cache in memory (one bit mask per message), with no store read
+  and no index to maintain. Measured on the throwaway proof: see
+  docs/progress.md.
+- Tidings and Hearth: list invitations with `Email/query` and
+  `{"inMailbox": <inbox>, "hasKeyword": "$itip"}`, read their calendar
+  part as now, and may remove the keyword once the person answered, so the
+  list holds only open invitations.
 
 ## 3. Attachments from and to files
 
@@ -139,6 +186,9 @@ So that clients set up with only an email address find all three:
 ## Order
 
 1. Section 5 (discovery) and 2 (invitations in Tidings): the two things
-   people notice first after the removal.
+   people notice first after the removal. Done on the Hearth Mail side:
+   the `$itip` keyword.
 2. Section 3 in Tidings.
-3. Sections 1b and 4 with Hearth's phases 2 and 3.
+3. Section 1b: built (Hearth Mail and the Tidings endpoint); the Tidings
+   branch waits to be merged and its secret set. Section 4 with Hearth's
+   phases 2 and 3.
