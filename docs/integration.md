@@ -52,8 +52,10 @@ b. In Hearth Mail itself (optional, for the spam filter). Built.
   (`x:SpamClassifier.learnHamFromCard`) trains such mail as ham.
 - The contract: `POST {url}`, `Authorization: Bearer <secret>`, body
   `{"account": "<mailbox address>", "sender": "<address>"}`, answer
-  `{"known": true}` or `{"known": false}`. Code:
-  crates/common/src/contacts_lookup.rs.
+  `{"known": true}` or `{"known": false}`. `account` is the account's own
+  address (its first address, which people sign in with and Tidings
+  stores as the account's username), not the alias or masked address the
+  mail reached. Code: crates/common/src/contacts_lookup.rs.
 - When it's asked: only for mail the filter scored as spam, delivered over
   SMTP or LMTP, whose sender is verified (signed in, or the From domain
   passed DMARC), and not the recipient's own address. Nothing else waits

@@ -300,7 +300,8 @@ impl EmailIngest for Server {
                         && let Some(lookup) = &self.core.spam.contacts_lookup
                         && let Some(sender) = &sender
                         && sender != deliver_to
-                        && lookup.is_known(account_id, deliver_to, sender).await
+                        && let Some(mailbox) = primary_address(self, account_id).await
+                        && lookup.is_known(account_id, &mailbox, sender).await
                     {
                         is_spam = false;
                         if self
@@ -1054,6 +1055,17 @@ impl ThreadMerge {
             merge_ids,
         }
     }
+}
+
+/// Hearth Mail: the account's own address (its first address on its first
+/// domain name), which is what the cloud knows the mailbox by (a Tidings
+/// account's username). Not the address the mail reached, which may be an
+/// alias or a masked address.
+async fn primary_address(server: &Server, account_id: u32) -> Option<String> {
+    let account = server.account(account_id).await.ok()?;
+    let address = account.addresses.first()?;
+    let domain = server.domain_by_id(address.domain_id).await.ok()??;
+    Some(format!("{}@{}", &*address.local_part, domain.name()))
 }
 
 /// Hearth Mail: whether a message carries an iTIP object (RFC 5546) the way

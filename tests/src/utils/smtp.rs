@@ -146,10 +146,12 @@ impl SmtpConnection {
     pub async fn read(&mut self, mut num_responses: usize, code: u8) -> Vec<String> {
         let mut lines = Vec::new();
         loop {
-            // Hearth Mail: 5 s, not 1.5 s: the first spam-scored delivery in
-            // a debug build on a busy machine took longer and failed the
-            // suite (docs/progress.md, 2026-11-23)
-            match tokio::time::timeout(Duration::from_secs(5), self.reader.next_line()).await {
+            // Hearth Mail: 30 s, not 1.5 s. The spam filter's first lookups
+            // (blocklists, MX) go to the real DNS, and on a busy machine or
+            // a slow resolver the first spam-scored delivery took more than
+            // 5 s and failed the suite (docs/progress.md, 2026-11-23). A
+            // server that hangs still fails it.
+            match tokio::time::timeout(Duration::from_secs(30), self.reader.next_line()).await {
                 Ok(Ok(Some(line))) => {
                     let is_done = line.as_bytes()[3] == b' ';
                     //let c = println!("<- {:?}", line);

@@ -281,7 +281,9 @@ pub async fn test(test: &mut TestServer) {
     // contacts live in Nextcloud or Hearth and are asked over HTTP
     // (common::contacts_lookup); here a stand-in answers "known" for
     // dmarc-bill@example.org only, and the server is switched to it.
-    let lookup_url = contacts_lookup_stub("dmarc-bill@example.org").await;
+    // The lookup is asked with John's own address (jdoe@), not the masked
+    // one the mail reached
+    let lookup_url = contacts_lookup_stub("jdoe@example.org", "dmarc-bill@example.org").await;
     let mut core = (*test.server.inner.shared_core.load_full()).clone();
     core.spam.contacts_lookup = Some(std::sync::Arc::new(
         common::contacts_lookup::ContactsLookup::new(lookup_url, "stub-secret".into()).unwrap(),
@@ -862,9 +864,9 @@ async fn inbox_count(server: &Server, account: &Account) -> usize {
 }
 
 /// Hearth Mail: a stand-in for the contacts lookup (Tidings or Hearth):
-/// answers `{"known": true}` when the request names `known_sender`, and
-/// `false` otherwise. Returns its URL.
-async fn contacts_lookup_stub(known_sender: &'static str) -> String {
+/// answers `{"known": true}` when the request asks about `known_sender` for
+/// the mailbox `account`, and `false` otherwise. Returns its URL.
+async fn contacts_lookup_stub(account: &'static str, known_sender: &'static str) -> String {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/known", listener.local_addr().unwrap());
@@ -875,7 +877,8 @@ async fn contacts_lookup_stub(known_sender: &'static str) -> String {
                 let n = socket.read(&mut buf).await.unwrap_or(0);
                 let request = String::from_utf8_lossy(&buf[..n]).to_lowercase();
                 let known = request.contains("authorization: bearer stub-secret")
-                    && request.contains(known_sender);
+                    && request.contains(&format!("\"account\":\"{account}\""))
+                    && request.contains(&format!("\"sender\":\"{known_sender}\""));
                 let body = format!("{{\"known\": {known}}}");
                 let reply = format!(
                     "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
