@@ -52,12 +52,12 @@ macro_rules! brand_url {
     };
 }
 
-/// The public repository the server's source is published in, named in
-/// `/.well-known/source`.
+/// The repository the server's source is published in, named in
+/// `/.well-known/source`: Hearth Mail's own, since this build is its code.
 #[macro_export]
 macro_rules! brand_repository {
     () => {
-        "https://git.coffeylabs.org/inbuxa/inbuxa-server"
+        "https://github.com/ifedan-ed/hearth-mail"
     };
 }
 
