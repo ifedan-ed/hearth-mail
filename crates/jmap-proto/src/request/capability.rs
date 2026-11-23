@@ -454,6 +454,27 @@ impl Capability {
 // inbuxa: a request's `using`. A capability the server doesn't know is kept,
 // not a parse error, so the request fails with unknownCapability naming it
 // (RFC 8620, section 3.6.1) instead of notRequest.
+//
+// Hearth Mail: the capabilities it removed (calendars, contacts, files and
+// principal availability) are the exception. Some clients and libraries
+// (jmap-client up to 0.4, for one) list every capability they know in every
+// request, mail-only ones included; refusing those requests would break mail
+// clients that worked before the removal. So they are accepted and ignored,
+// and a call to one of their methods answers unknownMethod.
+/// The capability URNs Hearth Mail removed, accepted in `using` and ignored.
+pub const REMOVED_CAPABILITIES: &[&str] = &[
+    "urn:ietf:params:jmap:calendars",
+    "urn:ietf:params:jmap:calendars:parse",
+    "urn:ietf:params:jmap:contacts",
+    "urn:ietf:params:jmap:contacts:parse",
+    "urn:ietf:params:jmap:filenode",
+    "urn:ietf:params:jmap:principals:availability",
+];
+
+fn is_removed_capability(capability: &str) -> bool {
+    REMOVED_CAPABILITIES.contains(&capability)
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Using {
     pub ids: CapabilityIds,
@@ -483,6 +504,9 @@ impl<'de> Deserialize<'de> for Using {
                 while let Some(capability_str) = seq.next_element::<std::borrow::Cow<str>>()? {
                     match Capability::parse(capability_str.as_ref()) {
                         Some(capability) => using.ids.0 |= capability as u32,
+                        // Named but not served: their methods answer
+                        // unknownMethod, the rest of the request runs
+                        None if is_removed_capability(capability_str.as_ref()) => {}
                         None => {
                             if using.unknown.is_none() {
                                 using.unknown = Some(capability_str.into_owned());

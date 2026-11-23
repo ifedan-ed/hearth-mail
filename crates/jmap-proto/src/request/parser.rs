@@ -1262,6 +1262,30 @@ mod tests {
         assert!(request.unknown_capability.is_none());
     }
 
+    // Hearth Mail: the removed capabilities are accepted and ignored, so a
+    // mail request that lists them still runs; their methods don't exist.
+    #[test]
+    fn removed_capabilities_are_ignored() {
+        let request = r#"{"using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail",
+                          "urn:ietf:params:jmap:contacts", "urn:ietf:params:jmap:calendars"],
+                          "methodCalls": [["Core/echo", {}, "0"]]}"#;
+        let request = Request::parse(request.as_bytes(), 10, 10240).unwrap();
+        assert!(request.unknown_capability.is_none());
+        assert!(
+            request
+                .using
+                .contains(crate::request::capability::Capability::Mail)
+        );
+
+        let request = r#"{"using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:calendars"],
+                          "methodCalls": [["Calendar/get", {}, "0"]]}"#;
+        let request = Request::parse(request.as_bytes(), 10, 10240).unwrap();
+        assert!(matches!(
+            request.method_calls[0].method,
+            super::RequestMethod::Error(_)
+        ));
+    }
+
     #[test]
     fn unknown_capability_over_websocket_is_named() {
         let message = r#"{"@type": "Request", "id": "r1", "using": ["urn:example:nope"],
