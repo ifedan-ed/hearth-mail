@@ -1249,7 +1249,8 @@ async fn post_bytes(
     params: &AHashMap<String, String>,
 ) -> Bytes {
     let mut client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
@@ -1275,7 +1276,8 @@ async fn post_json<D: DeserializeOwned>(
     body: &impl Serialize,
 ) -> D {
     let mut client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
@@ -1305,7 +1307,8 @@ async fn post_json_basic<D: DeserializeOwned>(
     body: &impl Serialize,
 ) -> D {
     let response = reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
@@ -1328,7 +1331,8 @@ async fn post_form_basic<T: DeserializeOwned>(
     params: &AHashMap<String, String>,
 ) -> T {
     let response = reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
@@ -1369,7 +1373,8 @@ async fn obtain_auth_code(http: &HttpRequest, client_id: &str, redirect_uri: &st
 
 async fn post_json_raw(url: &str, body: &impl Serialize) -> (u16, serde_json::Value) {
     let response = reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
@@ -1387,7 +1392,8 @@ async fn post_json_raw(url: &str, body: &impl Serialize) -> (u16, serde_json::Va
 /// inbuxa: K-S4: the status and body of a form POST.
 async fn post_status(url: &str, params: &AHashMap<String, String>) -> (u16, Bytes) {
     let response = reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
@@ -1407,7 +1413,8 @@ async fn post_form_basic_status(
     params: &AHashMap<String, String>,
 ) -> u16 {
     reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
@@ -1438,7 +1445,8 @@ async fn post_with_auth<T: DeserializeOwned>(
 
 async fn get_bytes(url: &str) -> Bytes {
     reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
+        // A debug build signs a password in slowly (argon2 unoptimised)
+        .timeout(Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
         .unwrap_or_default()
