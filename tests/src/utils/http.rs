@@ -163,7 +163,8 @@ impl HttpRequest {
         body: Option<String>,
     ) -> Result<String, String> {
         let mut request = reqwest::Client::builder()
-            .timeout(Duration::from_millis(500))
+            // A debug build signs a password in slowly (argon2 unoptimised)
+            .timeout(Duration::from_secs(5))
             .danger_accept_invalid_certs(true)
             .build()
             .unwrap()
