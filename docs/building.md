@@ -92,7 +92,7 @@ from here.
 - tools/export/public-replace.txt and public-messages.txt: names, hosts,
   addresses and local paths of the live installation, replaced in every
   file and commit message; public-mailmap.txt maps the author identity.
-- The script rewrites the branches (main, activesync; `BRANCHES` to
+- The script rewrites the branches (main; `BRANCHES` to
   change) on a scratch clone with git filter-repo, searches the result for
   anything forbidden, scans it with gitleaks (upstream's known test keys
   are accepted in gitleaks-upstream-fixtures.txt, each with its file and
