@@ -1,0 +1,11 @@
+{"type":"schematic","title":"Hearth Mail and the cloud","alt":"Mail apps reach Hearth Mail over IMAP, SMTP and JMAP and the cloud over CalDAV and CardDAV. Web mail (Tidings in Nextcloud now, Hearth later) uses Hearth Mail over JMAP with push, and the cloud's contacts, calendars and files in process. Hearth Mail asks the cloud only one thing: whether a sender is in the recipient's contacts.","spec":{"compartments":[
+{"id":"apps","label":"Mail apps: phones, Thunderbird, Apple Mail","shape":"rounded","col":2,"row":1},
+{"id":"hm","label":"Hearth Mail: IMAP, SMTP, JMAP, Sieve, spam filter","shape":"box","col":1,"row":3,"tone":"good"},
+{"id":"cloud","label":"Nextcloud now, Hearth later: calendars, contacts, files","shape":"box","col":3,"row":3},
+{"id":"web","label":"Web mail: Tidings now, Hearth later","shape":"rounded","col":2,"row":5}],
+"flows":[
+{"from":"apps","to":"hm","label":"IMAP, SMTP, JMAP"},
+{"from":"apps","to":"cloud","label":"CalDAV, CardDAV"},
+{"from":"hm","to":"cloud","label":"contacts lookup","style":"dashed"},
+{"from":"web","to":"hm","label":"JMAP + push"},
+{"from":"web","to":"cloud","label":"in process"}]}}

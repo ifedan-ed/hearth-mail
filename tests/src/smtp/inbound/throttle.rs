@@ -2,6 +2,8 @@
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ *
+ * Modified by Hearth Mail in 2026: calls start at the top of a rate window.
  */
 
 use crate::utils::server::TestServerBuilder;
@@ -79,6 +81,7 @@ async fn throttle_inbound() {
     // Test connection rate limit
     let mut session = test.new_mta_session();
     session.data.remote_ip_str = "10.0.0.1".into();
+    at_window_start().await;
     assert!(session.is_allowed().await, "Rate limiter too strict.");
     assert!(session.is_allowed().await, "Rate limiter too strict.");
     assert!(!session.is_allowed().await, "Rate limiter failed.");
@@ -97,6 +100,7 @@ async fn throttle_inbound() {
         dsn_info: None,
     }
     .into();
+    at_window_start().await;
     assert!(session.is_allowed().await, "Rate limiter too strict.");
     assert!(session.is_allowed().await, "Rate limiter too strict.");
     assert!(!session.is_allowed().await, "Rate limiter failed.");
@@ -118,9 +122,24 @@ async fn throttle_inbound() {
         flags: 0,
         dsn_info: None,
     });
+    at_window_start().await;
     assert!(session.is_allowed().await, "Rate limiter too strict.");
     assert!(session.is_allowed().await, "Rate limiter too strict.");
     assert!(!session.is_allowed().await, "Rate limiter failed.");
     session.data.remote_ip_str = "10.0.0.2".into();
     assert!(session.is_allowed().await, "Rate limiter too strict.");
+}
+
+/// Hearth Mail: waits until just after a whole second. The limiter counts in
+/// fixed windows aligned to the clock's seconds (`is_rate_allowed`: the
+/// bucket is `now / period`), so three calls that straddle a second boundary
+/// land in two windows and the third is allowed: the test failed now and
+/// then on a busy CI runner. Starting each group of calls at the top of a
+/// window keeps all of them in it.
+async fn at_window_start() {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let into_second = Duration::from_nanos(u64::from(now.subsec_nanos()));
+    tokio::time::sleep(Duration::from_secs(1) - into_second + Duration::from_millis(20)).await;
 }

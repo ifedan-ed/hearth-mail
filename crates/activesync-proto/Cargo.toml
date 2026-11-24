@@ -1,0 +1,18 @@
+[package]
+name = "activesync-proto"
+version.workspace = true
+edition = "2024"
+
+# Exchange ActiveSync's wire format and items, with no server code: the
+# WBXML codec and code pages, the request line, and the conversions between
+# ActiveSync items and iCalendar and vCard. docs/activesync.md.
+
+[dependencies]
+base64 = "0.22"
+calcard = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+chrono-tz = "0.10"
+quick-xml = "0.41"
+
+[lints]
+workspace = true

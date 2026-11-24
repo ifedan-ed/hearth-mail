@@ -14,6 +14,8 @@ only when it's configured to.
 
 ## Who talks to whom
 
+![Mail apps and web mail reach Hearth Mail for mail and the cloud for calendars, contacts and files; Hearth Mail asks the cloud only for the contacts lookup](img/integration.svg)
+
     phone / Thunderbird / Apple Mail ──IMAP, SMTP, JMAP──▶ Hearth Mail
               └──────────CalDAV, CardDAV──────────▶ Nextcloud or Hearth
 

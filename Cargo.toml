@@ -32,6 +32,9 @@ members = [
     "crates/relay-proto",
     "crates/outbound-tls",
     "crates/relay",
+    "crates/activesync-proto",
+    "crates/activesync",
+    "crates/dav-client",
     "tests",
 ]
 
@@ -93,6 +96,10 @@ rpath = false
 # vendor/sieve-rs is the published 0.7.3 with those renamed; see its
 # VENDORED.md. Re-vendor when the version in Cargo.lock moves.
 #
+# inbuxa: vendor/calcard is the published 0.3.14 with one work budget shared
+# by all the recurrence rules an expansion runs; see its VENDORED.md.
+# Re-vendor when the version in Cargo.lock moves.
+#
 # inbuxa: vendor/mail-parser is the published 0.11.9 with the changes its
 # VENDORED.md lists. Re-vendor when the version in Cargo.lock moves.
 #
@@ -102,6 +109,7 @@ rpath = false
 # vendor/opentelemetry-rust/VENDORED.md.
 [patch.crates-io]
 sieve-rs = { path = "vendor/sieve-rs" }
+calcard = { path = "vendor/calcard" }
 mail-parser = { path = "vendor/mail-parser" }
 hickory-proto = { path = "vendor/hickory-dns/hickory-proto" }
 hickory-net = { path = "vendor/hickory-dns/hickory-net" }

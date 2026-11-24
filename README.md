@@ -41,8 +41,27 @@ for those; docs/integration.md shows how they fit together.
 
 Any client that speaks IMAP and SMTP works: Thunderbird, Apple Mail,
 Outlook, K-9 and the other phone apps. Thunderbird and Outlook find the
-settings by themselves from the email address (autoconfig, autodiscover and
-SRV records). JMAP clients use `https://<host>/.well-known/jmap`.
+settings by themselves from the email address (autoconfig, Autodiscover in
+its POX, SOAP and JSON forms, and SRV records). JMAP clients use `https://<host>/.well-known/jmap`.
+
+Exchange ActiveSync (14.1 and 16.1) is served at
+`https://<host>/Microsoft-Server-ActiveSync`: iPhone Mail, Outlook for iOS
+and Android, and Android's Exchange apps get mail with push, and, through
+the cloud, calendars, contacts, tasks and notes, in one account set up
+from the address and the password. `https://<host>/setup` gives iPhones
+and Macs a profile with the mail account and the cloud's calendars and
+contacts. Autodiscover answers in its POX, SOAP and JSON forms, so
+Outlook and phones find the server from the address alone.
+docs/activesync.md has the details.
+
+Calendars, contacts, tasks and notes are not stored in Hearth Mail: the
+DAV bridge reads and writes them in the cloud over CalDAV and CardDAV
+(settings below), so the same items show in Nextcloud and any DAV client.
+Without the bridge, ActiveSync serves mail only.
+
+Tested with replayed sessions of iPhone Mail, Outlook mobile and an
+Android client, written from Microsoft's protocol documents, and against a
+throwaway Nextcloud 35. Not yet tried with real devices.
 
 ## Running
 
@@ -73,6 +92,13 @@ Environment settings added by Hearth Mail:
   (docs/integration.md, section 1b). The spam settings' "Trust contacts"
   switch turns the check off.
 
+- `INBUXA_DAV_URL` and `INBUXA_DAV_AUTH` (`passthrough` or
+  `app-password`): the cloud's CalDAV/CardDAV root
+  (`https://<cloud>/remote.php/dav` for Nextcloud) for ActiveSync's
+  calendars, contacts, tasks and notes, and how Hearth Mail signs in there:
+  with the device's own password, or with an app password each person links
+  on `/setup`. Both or neither; without them ActiveSync serves mail only.
+
 The admin console is a separate program,
 [inbuxa Admin](https://git.coffeylabs.org/inbuxa/inbuxa-admin). It builds its
 pages from the server's schema, so it shows only what Hearth Mail does.
@@ -84,17 +110,24 @@ Builds run in a pinned toolchain container, with memory and CPU capped:
     ci/cargo.sh build -p inbuxa --locked        # a dev build
     ci/build-image.sh                           # the release image
 
-Tests:
+Tests: while working, run only the tests of what changed, the crate's own
+and the integration suites that touch it, for example:
 
-    ci/cargo.sh test --workspace --exclude tests --locked --features smtp/test_mode
-    STORE=RocksDb ci/cargo.sh test -p tests --locked -- --test-threads=1
+    ci/cargo.sh test -p activesync-proto -p activesync -p dav-client
+    STORE=RocksDb ci/cargo.sh test -p tests activesync -- --test-threads=1
+    tools/activesync/test-bridge-nextcloud.sh   # ActiveSync with a throwaway Nextcloud
 
-docs/building.md has the details.
+The full suite (every crate's unit tests and the integration suites) runs
+on GitHub Actions, on demand and before a release or a switch of a live
+server; every push there runs formatting, clippy, the build and the
+changed crates' tests. docs/building.md has the details, and how the public
+copy on GitHub is made.
 
 ## Documentation
 
 - docs/integration.md: contacts, calendars, files and administration with
   Nextcloud and Hearth.
+- docs/activesync.md: Exchange ActiveSync, Autodiscover and the device setup page.
 - docs/building.md: builds, images, tests and CI.
 - docs/spec/: inbuxa's own feature specifications, kept for the features
   that remain.

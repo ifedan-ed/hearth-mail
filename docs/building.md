@@ -14,6 +14,8 @@ ci/cargo.sh runs cargo in it:
   room and runs at low priority (`NO_LOADWAIT=1` skips that, for CI);
 - with the container capped: `HM_MEM` (16g), `HM_CPUS` (8), cargo jobs
   `HM_JOBS` (8);
+- with core dumps off (a crashed test once left a 220 MB core file in the
+  checkout, and it was committed);
 - with the cargo registry in the volume `hearth-mail-cargo` and the target
   directory in `hearth-mail-target` (or `HM_TARGET`, for a second
   checkout), so builds are incremental and nothing is written into the
@@ -75,6 +77,44 @@ every change of the builder (and after dind's images are wiped):
 There is no build cache: the jobs use no actions (fetching actions/cache
 from code.forgejo.org hung and failed the first run), so each job builds
 from scratch, split so each fits the runner's hour.
+
+## The public copy on GitHub
+
+Forgejo (projects/hearth-mail) is the main copy. github.com/ifedan-ed/hearth-mail
+is a public, filtered mirror, used for builds and tests on GitHub Actions
+(the maintainer, 2026-11-24). The rule: private paths stay on Forgejo; the mirror is
+made only with tools/export/public-mirror.sh, never by pushing a branch
+from here.
+
+- tools/export/private-paths.txt: the paths left out of every commit (the
+  cutover plan and its pre-check results, progress and decision notes, the
+  builders' working rules, the Forgejo runner workflow, the export tools).
+- tools/export/public-replace.txt and public-messages.txt: names, hosts,
+  addresses and local paths of the live installation, replaced in every
+  file and commit message; public-mailmap.txt maps the author identity.
+- The script rewrites the branches (main, activesync; `BRANCHES` to
+  change) on a scratch clone with git filter-repo, searches the result for
+  anything forbidden, scans it with gitleaks (upstream's known test keys
+  are accepted in gitleaks-upstream-fixtures.txt, each with its file and
+  line), and only with `--push` force-pushes to GitHub. Run it again after
+  each merge to mirror; the GitHub commits differ from Forgejo's because the
+  history is rewritten.
+
+    tools/export/public-mirror.sh           # check only
+    tools/export/public-mirror.sh --push    # check, then mirror
+
+GitHub Actions (.github/workflows/ci.yml):
+
+- every push and pull request: formatting, the console schema, clippy, the
+  server build, and the unit tests of the crates the change touches
+  (ci/changed-crates.py; all of them when Cargo.toml, Cargo.lock, vendor/
+  or ci/ changed);
+- on demand (workflow_dispatch) and for a release tag: the whole
+  workspace's unit tests and the integration suites.
+
+Locally only the tests of the code changed run (one crate, capped jobs,
+through loadwait); the full suite runs on GitHub before a release or the
+cutover.
 
 ## Results
 

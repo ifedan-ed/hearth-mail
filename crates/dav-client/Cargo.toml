@@ -1,0 +1,23 @@
+[package]
+name = "dav-client"
+version.workspace = true
+edition = "2024"
+
+# A CalDAV and CardDAV client: discovery, sync-collection, multiget, writes
+# with ETags, MKCALENDAR, and Nextcloud's Login Flow v2. Plain DAV, so the
+# ActiveSync bridge works with Nextcloud now and Hearth later.
+# docs/activesync.md, "the DAV bridge".
+
+[dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2"] }
+quick-xml = "0.41"
+base64 = "0.22"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+percent-encoding = "2.3.2"
+
+[dev-dependencies]
+tokio = { version = "1.53", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
+
+[lints]
+workspace = true

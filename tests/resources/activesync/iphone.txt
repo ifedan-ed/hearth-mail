@@ -1,0 +1,310 @@
+# iPhone Mail (iOS 18), protocol 16.1, plain query.
+#
+# Built, not recorded. Sources: the request and answer shapes of [MS-ASCMD]
+# v20250520 section 4 (4.4 FolderSync, 4.5 Sync, 4.6 SendMail, 4.8 Ping,
+# 4.10 ItemOperations), [MS-ASPROV] 4.1 (provisioning in two steps) and
+# [MS-ASEMAIL] 4.1.2 (body preferences, MIMESupport). The client's own
+# habits are as publicly known, not checked against a capture: DeviceType
+# "iPhone", a device id of "Appl" and the serial number, a User-Agent of
+# "Apple-<model>/<build>", the plain query with MS-ASProtocolVersion, a
+# Provision before the first FolderSync, MIME bodies (BodyPreference type 4
+# with MIMESupport 2), and Ping for push.
+
+@device ApplF17ABCDE1234 iPhone Apple-iPhone16C2/2201.170 16.1 plain
+
+# The one-tap setup page and its profile.
+!setup
+contains <title>Set up mail</title>
+!setup/account
+contains "cloudLink":false
+!setup/apple.mobileconfig
+contains application/x-apple-aspen-config
+contains <string>com.apple.mail.managed</string>
+contains <key>EmailAddress</key><string>ann@example.com</string>
+contains <key>IncomingMailServerPortNumber</key><integer>993</integer>
+
+>>> OPTIONS
+<<< 200
+? MS-ASProtocolVersions: 16.1
+? MS-ASProtocolCommands: Ping
+
+>>> Provision
+<Provision xmlns="Provision:" xmlns:settings="Settings:">
+  <settings:DeviceInformation>
+    <settings:Set>
+      <settings:Model>iPhone16C2</settings:Model>
+      <settings:FriendlyName>Ann's iPhone</settings:FriendlyName>
+      <settings:OS>iOS 18.1 22B83</settings:OS>
+      <settings:OSLanguage>English</settings:OSLanguage>
+      <settings:UserAgent>Apple-iPhone16C2/2201.170</settings:UserAgent>
+    </settings:Set>
+  </settings:DeviceInformation>
+  <Policies>
+    <Policy>
+      <PolicyType>MS-EAS-Provisioning-WBXML</PolicyType>
+    </Policy>
+  </Policies>
+</Provision>
+<<< 200
+<Provision xmlns="Provision:" xmlns:settings="Settings:">
+  <Status>1</Status>
+  <settings:DeviceInformation><settings:Status>1</settings:Status></settings:DeviceInformation>
+  <Policies>
+    <Policy>
+      <PolicyType>MS-EAS-Provisioning-WBXML</PolicyType>
+      <Status>1</Status>
+      <PolicyKey>$temp</PolicyKey>
+      <Data>
+        <EASProvisionDoc>
+          <DevicePasswordEnabled>0</DevicePasswordEnabled>
+          <RequireDeviceEncryption>0</RequireDeviceEncryption>
+          <AllowCamera>1</AllowCamera>
+        </EASProvisionDoc>
+      </Data>
+    </Policy>
+  </Policies>
+</Provision>
+
+>>> Provision
+? X-MS-PolicyKey: $temp
+<Provision xmlns="Provision:">
+  <Policies>
+    <Policy>
+      <PolicyType>MS-EAS-Provisioning-WBXML</PolicyType>
+      <PolicyKey>$temp</PolicyKey>
+      <Status>1</Status>
+    </Policy>
+  </Policies>
+</Provision>
+<<< 200
+<Provision xmlns="Provision:">
+  <Status>1</Status>
+  <Policies><Policy><Status>1</Status><PolicyKey>$policy</PolicyKey></Policy></Policies>
+</Provision>
+
+>>> FolderSync
+? X-MS-PolicyKey: $policy
+<FolderSync xmlns="FolderHierarchy:"><SyncKey>0</SyncKey></FolderSync>
+<<< 200
+<FolderSync xmlns="FolderHierarchy:">
+  <Status>1</Status>
+  <SyncKey>$fs</SyncKey>
+  <Changes>
+    <Add><ServerId>$inbox</ServerId><ParentId>0</ParentId><Type>2</Type></Add>
+    <Add><ServerId>$sent</ServerId><ParentId>0</ParentId><Type>5</Type></Add>
+    <Add><ServerId>$trash</ServerId><ParentId>0</ParentId><Type>4</Type></Add>
+  </Changes>
+</FolderSync>
+
+!deliver Welcome to Hearth
+
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:">
+  <Collections>
+    <Collection>
+      <SyncKey>0</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:">
+  <Collections>
+    <Collection>
+      <SyncKey>1</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <Status>1</Status>
+    </Collection>
+  </Collections>
+</Sync>
+
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:" xmlns:airsyncbase="AirSyncBase:">
+  <Collections>
+    <Collection>
+      <SyncKey>1</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <DeletesAsMoves>1</DeletesAsMoves>
+      <GetChanges>1</GetChanges>
+      <WindowSize>25</WindowSize>
+      <Options>
+        <FilterType>3</FilterType>
+        <airsyncbase:BodyPreference>
+          <airsyncbase:Type>4</airsyncbase:Type>
+          <airsyncbase:TruncationSize>500000</airsyncbase:TruncationSize>
+        </airsyncbase:BodyPreference>
+        <MIMESupport>2</MIMESupport>
+      </Options>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:email="Email:" xmlns:airsyncbase="AirSyncBase:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k2</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <Status>1</Status>
+      <Commands>
+        <Add>
+          <ServerId>$welcome</ServerId>
+          <ApplicationData>
+            <email:From>"Carol Clark" &lt;carol@example.org&gt;</email:From>
+            <email:Subject>Welcome to Hearth</email:Subject>
+            <email:Read>0</email:Read>
+            <airsyncbase:Body>
+              <airsyncbase:Type>4</airsyncbase:Type>
+              <airsyncbase:Data>~Subject: Welcome to Hearth</airsyncbase:Data>
+            </airsyncbase:Body>
+            <email:MessageClass>IPM.Note</email:MessageClass>
+          </ApplicationData>
+        </Add>
+      </Commands>
+    </Collection>
+  </Collections>
+</Sync>
+
+# The message is read on the phone.
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:" xmlns:email="Email:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k2</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <Commands>
+        <Change>
+          <ServerId>$welcome</ServerId>
+          <ApplicationData><email:Read>1</email:Read></ApplicationData>
+        </Change>
+      </Commands>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k3</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <Status>1</Status>
+    </Collection>
+  </Collections>
+</Sync>
+
+# Push: mail arrives while the Ping waits.
+!deliver-later 2 Second message
+>>> Ping
+? X-MS-PolicyKey: $policy
+<Ping xmlns="Ping:">
+  <HeartbeatInterval>480</HeartbeatInterval>
+  <Folders><Folder><Id>$inbox</Id><Class>Email</Class></Folder></Folders>
+</Ping>
+<<< 200
+<Ping xmlns="Ping:"><Status>2</Status><Folders><Folder>$inbox</Folder></Folders></Ping>
+
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k3</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <GetChanges/>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:email="Email:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k4</SyncKey>
+      <Status>1</Status>
+      <Commands>
+        <Add>
+          <ServerId>$second</ServerId>
+          <ApplicationData><email:Subject>Second message</email:Subject></ApplicationData>
+        </Add>
+      </Commands>
+    </Collection>
+  </Collections>
+</Sync>
+
+# Nothing new: an empty answer.
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k4</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200 empty
+
+>>> SendMail
+? X-MS-PolicyKey: $policy
+<SendMail xmlns="ComposeMail:">
+<ClientId>iphone-1</ClientId>
+<SaveInSentItems/>
+<Mime>From: Ann Archer &lt;ann@example.com&gt;
+To: Bob Baker &lt;bob@example.com&gt;
+Subject: Hello Bob
+Message-ID: &lt;hello-bob@example.com&gt;
+Date: Mon, 23 Nov 2026 11:00:00 +0000
+Content-Type: text/plain; charset=utf-8
+
+Sent from my iPhone</Mime>
+</SendMail>
+<<< 200 empty
+
+>>> Settings
+? X-MS-PolicyKey: $policy
+<Settings xmlns="Settings:">
+  <Oof><Get><BodyType>Text</BodyType></Get></Oof>
+  <UserInformation><Get/></UserInformation>
+</Settings>
+<<< 200
+<Settings xmlns="Settings:">
+  <Status>1</Status>
+  <Oof><Status>1</Status><Get><OofState>0</OofState></Get></Oof>
+  <UserInformation>
+    <Status>1</Status>
+    <Get><Accounts><Account><EmailAddresses><PrimarySmtpAddress>ann@example.com</PrimarySmtpAddress></EmailAddresses></Account></Accounts></Get>
+  </UserInformation>
+</Settings>
+
+>>> ItemOperations
+? X-MS-PolicyKey: $policy
+<ItemOperations xmlns="ItemOperations:" xmlns:airsync="AirSync:" xmlns:airsyncbase="AirSyncBase:">
+  <Fetch>
+    <Store>Mailbox</Store>
+    <airsync:CollectionId>$inbox</airsync:CollectionId>
+    <airsync:ServerId>$welcome</airsync:ServerId>
+    <Options>
+      <airsyncbase:BodyPreference><airsyncbase:Type>1</airsyncbase:Type></airsyncbase:BodyPreference>
+    </Options>
+  </Fetch>
+</ItemOperations>
+<<< 200
+<ItemOperations xmlns="ItemOperations:" xmlns:airsync="AirSync:" xmlns:email="Email:" xmlns:airsyncbase="AirSyncBase:">
+  <Status>1</Status>
+  <Response>
+    <Fetch>
+      <Status>1</Status>
+      <airsync:ServerId>$welcome</airsync:ServerId>
+      <airsync:Class>Email</airsync:Class>
+      <Properties>
+        <email:Subject>Welcome to Hearth</email:Subject>
+        <email:Read>1</email:Read>
+        <airsyncbase:Body>
+          <airsyncbase:Type>1</airsyncbase:Type>
+          <airsyncbase:Data>Hello, this is "Welcome to Hearth".</airsyncbase:Data>
+        </airsyncbase:Body>
+      </Properties>
+    </Fetch>
+  </Response>
+</ItemOperations>

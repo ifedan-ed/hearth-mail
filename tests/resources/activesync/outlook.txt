@@ -1,0 +1,186 @@
+# Outlook for iOS and Android, protocol 16.1, plain query.
+#
+# Built, not recorded. Sources: [MS-ASCMD] v20250520 section 4 (4.4
+# FolderSync, 4.5 Sync, 4.11 Find, 4.12 Search, 4.14 FolderCreate, 4.15
+# MoveItems, 4.3 Settings), [MS-OXWSADISC] 4.3 (SOAP GetUserSettings) and
+# [MS-ASAIRS] (HTML bodies with a preview). The client's habits are as
+# publicly known, not checked against a capture: Autodiscover JSON first
+# (`Protocol=ActiveSync`), then SOAP, DeviceType "Outlook", a User-Agent of
+# "Outlook-iOS-Android/1.0", HTML bodies cut short with a preview, Find
+# for search, and out of office set from the app.
+
+@device OutlookA1B2C3D4E5F6 Outlook Outlook-iOS-Android/1.0 16.1 plain
+
+!autodiscover json
+contains "Protocol":"ActiveSync"
+contains /Microsoft-Server-ActiveSync
+
+!autodiscover soap
+contains <ErrorCode>NoError</ErrorCode>
+contains <Name>UserDisplayName</Name><Value>bob@example.com</Value>
+contains <SettingName>ExternalEwsUrl</SettingName>
+
+>>> OPTIONS
+<<< 200
+? MS-ASProtocolVersions: 16.1
+? MS-ASProtocolCommands: Find
+
+>>> FolderSync
+<FolderSync xmlns="FolderHierarchy:"><SyncKey>0</SyncKey></FolderSync>
+<<< 200
+<FolderSync xmlns="FolderHierarchy:">
+  <Status>1</Status>
+  <SyncKey>$fs</SyncKey>
+  <Changes><Add><ServerId>$inbox</ServerId><DisplayName>Inbox</DisplayName><Type>2</Type></Add></Changes>
+</FolderSync>
+
+>>> Settings
+<Settings xmlns="Settings:"><UserInformation><Get/></UserInformation></Settings>
+<<< 200
+<Settings xmlns="Settings:">
+  <Status>1</Status>
+  <UserInformation><Status>1</Status><Get><Accounts><Account><EmailAddresses><SMTPAddress>bob@example.com</SMTPAddress></EmailAddresses></Account></Accounts></Get></UserInformation>
+</Settings>
+
+>>> Sync
+<Sync xmlns="AirSync:"><Collections><Collection><SyncKey>0</SyncKey><CollectionId>$inbox</CollectionId></Collection></Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:"><Collections><Collection><SyncKey>1</SyncKey><Status>1</Status></Collection></Collections></Sync>
+
+# Ann's two messages from the other sessions have arrived: her iPhone's,
+# and her Android reply with the original quoted under it.
+>>> Sync
+<Sync xmlns="AirSync:" xmlns:airsyncbase="AirSyncBase:">
+  <Collections>
+    <Collection>
+      <SyncKey>1</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <GetChanges>1</GetChanges>
+      <WindowSize>50</WindowSize>
+      <Options>
+        <FilterType>0</FilterType>
+        <airsyncbase:BodyPreference>
+          <airsyncbase:Type>2</airsyncbase:Type>
+          <airsyncbase:TruncationSize>51200</airsyncbase:TruncationSize>
+          <airsyncbase:Preview>100</airsyncbase:Preview>
+        </airsyncbase:BodyPreference>
+      </Options>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:email="Email:" xmlns:airsyncbase="AirSyncBase:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k2</SyncKey>
+      <Status>1</Status>
+      <Commands>
+        <Add>
+          <ServerId>$hello</ServerId>
+          <ApplicationData>
+            <email:From>"Ann Archer" &lt;ann@example.com&gt;</email:From>
+            <email:Subject>Hello Bob</email:Subject>
+            <airsyncbase:Body><airsyncbase:Data>~Sent from my iPhone</airsyncbase:Data></airsyncbase:Body>
+          </ApplicationData>
+        </Add>
+        <Add>
+          <ServerId>$reply</ServerId>
+          <ApplicationData>
+            <email:Subject>Re: Android test</email:Subject>
+            <airsyncbase:Body>
+              <airsyncbase:Data>~&gt; Hello, this is "Android test".</airsyncbase:Data>
+              <airsyncbase:Preview>~Thanks, forwarding this to Bob.</airsyncbase:Preview>
+            </airsyncbase:Body>
+          </ApplicationData>
+        </Add>
+      </Commands>
+    </Collection>
+  </Collections>
+</Sync>
+
+>>> Find
+<Find xmlns="Find:" xmlns:airsync="AirSync:">
+  <SearchId>7dc6ffa0-2aa5-43f6-b441-bdda13785428</SearchId>
+  <ExecuteSearch>
+    <MailBoxSearchCriterion>
+      <Query><airsync:Class>Email</airsync:Class><FreeText>subject: Android</FreeText></Query>
+      <Options><Range>0-5</Range></Options>
+    </MailBoxSearchCriterion>
+  </ExecuteSearch>
+</Find>
+<<< 200
+<Find xmlns="Find:" xmlns:airsync="AirSync:" xmlns:email="Email:">
+  <Status>1</Status>
+  <Response>
+    <Status>1</Status>
+    <Result>
+      <airsync:Class>Email</airsync:Class>
+      <airsync:ServerId>$reply</airsync:ServerId>
+      <airsync:CollectionId>$inbox</airsync:CollectionId>
+      <Properties><email:Subject>Re: Android test</email:Subject></Properties>
+    </Result>
+    <Total>1</Total>
+  </Response>
+</Find>
+
+>>> Search
+<Search xmlns="Search:" xmlns:airsync="AirSync:">
+  <Store>
+    <Name>Mailbox</Name>
+    <Query><And><airsync:CollectionId>$inbox</airsync:CollectionId><FreeText>iPhone</FreeText></And></Query>
+    <Options><Range>0-4</Range></Options>
+  </Store>
+</Search>
+<<< 200
+<Search xmlns="Search:" xmlns:airsync="AirSync:" xmlns:email="Email:">
+  <Status>1</Status>
+  <Response><Store><Status>1</Status>
+    <Result><LongId>$hello</LongId><Properties><email:Subject>Hello Bob</email:Subject></Properties></Result>
+  </Store></Response>
+</Search>
+
+>>> FolderCreate
+<FolderCreate xmlns="FolderHierarchy:">
+  <SyncKey>$fs</SyncKey><ParentId>0</ParentId><DisplayName>Archive 2026</DisplayName><Type>12</Type>
+</FolderCreate>
+<<< 200
+<FolderCreate xmlns="FolderHierarchy:"><Status>1</Status><SyncKey>$fs2</SyncKey><ServerId>$archive</ServerId></FolderCreate>
+
+>>> MoveItems
+<MoveItems xmlns="Move:">
+  <Move><SrcMsgId>$hello</SrcMsgId><SrcFldId>$inbox</SrcFldId><DstFldId>$archive</DstFldId></Move>
+</MoveItems>
+<<< 200
+<MoveItems xmlns="Move:"><Response><SrcMsgId>$hello</SrcMsgId><Status>3</Status><DstMsgId>$hello</DstMsgId></Response></MoveItems>
+
+# The device moved it itself: the Inbox has nothing to tell.
+>>> Sync
+<Sync xmlns="AirSync:"><Collections><Collection><SyncKey>$k2</SyncKey><CollectionId>$inbox</CollectionId></Collection></Collections></Sync>
+<<< 200 empty
+
+>>> Settings
+<Settings xmlns="Settings:">
+  <Oof>
+    <Set>
+      <OofState>1</OofState>
+      <OofMessage>
+        <AppliesToInternal/>
+        <Enabled>1</Enabled>
+        <ReplyMessage>Away until Monday.</ReplyMessage>
+        <BodyType>Text</BodyType>
+      </OofMessage>
+    </Set>
+  </Oof>
+</Settings>
+<<< 200
+<Settings xmlns="Settings:"><Status>1</Status><Oof><Status>1</Status></Oof></Settings>
+
+>>> Settings
+<Settings xmlns="Settings:"><Oof><Get><BodyType>Text</BodyType></Get></Oof></Settings>
+<<< 200
+<Settings xmlns="Settings:">
+  <Oof><Status>1</Status><Get>
+    <OofState>1</OofState>
+    <OofMessage><AppliesToInternal/><Enabled>1</Enabled><ReplyMessage>Away until Monday.</ReplyMessage></OofMessage>
+  </Get></Oof>
+</Settings>

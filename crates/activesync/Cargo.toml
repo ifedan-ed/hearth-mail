@@ -1,0 +1,33 @@
+[package]
+name = "activesync"
+version.workspace = true
+edition = "2024"
+
+# Exchange ActiveSync 14.1 and 16.1, served at /Microsoft-Server-ActiveSync.
+# Mail runs as in-process JMAP requests; the other classes go through the
+# DAV bridge. docs/activesync.md.
+
+[dependencies]
+activesync-proto = { path = "../activesync-proto" }
+dav-client = { path = "../dav-client" }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+chrono-tz = "0.10"
+common = { path = "../common" }
+http_proto = { path = "../http-proto" }
+jmap = { path = "../jmap" }
+jmap_proto = { path = "../jmap-proto" }
+store = { path = "../store" }
+trc = { path = "../trc" }
+types = { path = "../types" }
+utils = { path = "../utils" }
+hyper = { version = "1.11.1", features = ["server", "http1", "http2"] }
+mail-parser = { version = "0.11", features = ["full_encoding"] }
+mail-builder = { version = "1.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.53", features = ["time", "sync"] }
+base64 = "0.22"
+rand = "0.10.2"
+
+[lints]
+workspace = true

@@ -1,0 +1,196 @@
+# An Android Exchange client (Samsung Email / Nine style), protocol 14.1,
+# base64 query.
+#
+# Built, not recorded. Sources: [MS-ASHTTP] v20250520 2.2.1.1.1.1 (the
+# base64 query: version, command code, locale, device id, device type,
+# parameters), [MS-ASCMD] section 4 (4.2 Autodiscover in its mobilesync
+# form, 4.4 FolderSync, 4.5 Sync with a window, 4.7 SmartReply, 4.8 Ping,
+# 4.9 GetItemEstimate), [MS-ASPROV] 4.1 and [MS-ASAIRS] (plain-text bodies
+# cut to a size). The client's habits are as publicly known, not checked
+# against a capture: Autodiscover POX first, protocol 14.1, DeviceType
+# "Android", a one-week filter, plain text with truncation, and an
+# estimate before the first sync.
+
+@device androidc1234567890 Android Android-Mail/2025.1 14.1 base64
+
+!autodiscover pox
+contains <Type>MobileSync</Type>
+contains /Microsoft-Server-ActiveSync</Url>
+
+>>> OPTIONS
+<<< 200
+? MS-ASProtocolVersions: 14.1
+
+>>> Provision
+<Provision xmlns="Provision:">
+  <Policies><Policy><PolicyType>MS-EAS-Provisioning-WBXML</PolicyType></Policy></Policies>
+</Provision>
+<<< 200
+<Provision xmlns="Provision:">
+  <Status>1</Status>
+  <Policies><Policy><Status>1</Status><PolicyKey>$temp</PolicyKey></Policy></Policies>
+</Provision>
+
+>>> Provision
+? X-MS-PolicyKey: $temp
+<Provision xmlns="Provision:">
+  <Policies><Policy><PolicyType>MS-EAS-Provisioning-WBXML</PolicyType><PolicyKey>$temp</PolicyKey><Status>1</Status></Policy></Policies>
+</Provision>
+<<< 200
+<Provision xmlns="Provision:">
+  <Policies><Policy><Status>1</Status><PolicyKey>$policy</PolicyKey></Policy></Policies>
+</Provision>
+
+>>> FolderSync
+? X-MS-PolicyKey: $policy
+<FolderSync xmlns="FolderHierarchy:"><SyncKey>0</SyncKey></FolderSync>
+<<< 200
+<FolderSync xmlns="FolderHierarchy:">
+  <Status>1</Status>
+  <SyncKey>$fs</SyncKey>
+  <Changes><Add><ServerId>$inbox</ServerId><Type>2</Type></Add></Changes>
+</FolderSync>
+
+!deliver Android test
+
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:" xmlns:airsyncbase="AirSyncBase:">
+  <Collections>
+    <Collection>
+      <SyncKey>0</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <Options>
+        <FilterType>3</FilterType>
+        <airsyncbase:BodyPreference>
+          <airsyncbase:Type>1</airsyncbase:Type>
+          <airsyncbase:TruncationSize>20</airsyncbase:TruncationSize>
+        </airsyncbase:BodyPreference>
+      </Options>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:"><Collections><Collection><SyncKey>1</SyncKey><Status>1</Status></Collection></Collections></Sync>
+
+# The iPhone session left two messages in this Inbox; with this one, three.
+>>> GetItemEstimate
+? X-MS-PolicyKey: $policy
+<GetItemEstimate xmlns="GetItemEstimate:" xmlns:airsync="AirSync:">
+  <Collections>
+    <Collection>
+      <airsync:SyncKey>1</airsync:SyncKey>
+      <CollectionId>$inbox</CollectionId>
+    </Collection>
+  </Collections>
+</GetItemEstimate>
+<<< 200
+<GetItemEstimate xmlns="GetItemEstimate:">
+  <Response><Status>1</Status><Collection><CollectionId>$inbox</CollectionId><Estimate>3</Estimate></Collection></Response>
+</GetItemEstimate>
+
+# A window of one: the newest message, and more to come.
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:">
+  <Collections>
+    <Collection>
+      <SyncKey>1</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <DeletesAsMoves>1</DeletesAsMoves>
+      <GetChanges>1</GetChanges>
+      <WindowSize>1</WindowSize>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:email="Email:" xmlns:airsyncbase="AirSyncBase:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k2</SyncKey>
+      <Status>1</Status>
+      <Commands>
+        <Add>
+          <ServerId>$msg</ServerId>
+          <ApplicationData>
+            <email:Subject>Android test</email:Subject>
+            <airsyncbase:Body>
+              <airsyncbase:Type>1</airsyncbase:Type>
+              <airsyncbase:Truncated>1</airsyncbase:Truncated>
+              <airsyncbase:Data>Hello, this is "Andr</airsyncbase:Data>
+            </airsyncbase:Body>
+          </ApplicationData>
+        </Add>
+      </Commands>
+      <MoreAvailable/>
+    </Collection>
+  </Collections>
+</Sync>
+
+>>> SmartReply ItemId=$msg CollectionId=$inbox
+? X-MS-PolicyKey: $policy
+<SmartReply xmlns="ComposeMail:">
+<ClientId>android-1</ClientId>
+<SaveInSentItems/>
+<Source><FolderId>$inbox</FolderId><ItemId>$msg</ItemId></Source>
+<Mime>From: ann@example.com
+To: bob@example.com
+Subject: Re: Android test
+Content-Type: text/plain; charset=utf-8
+
+Thanks, forwarding this to Bob.</Mime>
+</SmartReply>
+<<< 200 empty
+
+# The device deletes the message; the other two arrive.
+>>> Sync
+? X-MS-PolicyKey: $policy
+<Sync xmlns="AirSync:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k2</SyncKey>
+      <CollectionId>$inbox</CollectionId>
+      <DeletesAsMoves>1</DeletesAsMoves>
+      <GetChanges>1</GetChanges>
+      <WindowSize>10</WindowSize>
+      <Commands><Delete><ServerId>$msg</ServerId></Delete></Commands>
+    </Collection>
+  </Collections>
+</Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:email="Email:">
+  <Collections>
+    <Collection>
+      <SyncKey>$k3</SyncKey>
+      <Status>1</Status>
+      <Commands>
+        <Add><ApplicationData><email:Subject>Second message</email:Subject></ApplicationData></Add>
+        <Add><ApplicationData><email:Subject>Welcome to Hearth</email:Subject><email:Read>1</email:Read></ApplicationData></Add>
+      </Commands>
+    </Collection>
+  </Collections>
+</Sync>
+
+# The folder list hasn't changed.
+>>> FolderSync
+? X-MS-PolicyKey: $policy
+<FolderSync xmlns="FolderHierarchy:"><SyncKey>$fs</SyncKey></FolderSync>
+<<< 200
+<FolderSync xmlns="FolderHierarchy:"><Status>1</Status><SyncKey>$fs</SyncKey><Changes><Count>0</Count></Changes></FolderSync>
+
+!deliver-later 2 Android push
+>>> Ping
+? X-MS-PolicyKey: $policy
+<Ping xmlns="Ping:">
+  <HeartbeatInterval>300</HeartbeatInterval>
+  <Folders><Folder><Id>$inbox</Id><Class>Email</Class></Folder></Folders>
+</Ping>
+<<< 200
+<Ping xmlns="Ping:"><Status>2</Status><Folders><Folder>$inbox</Folder></Folders></Ping>
+
+# An empty Ping repeats the last one; push again.
+!deliver-later 2 Android push two
+>>> Ping
+? X-MS-PolicyKey: $policy
+<<< 200
+<Ping xmlns="Ping:"><Status>2</Status></Ping>

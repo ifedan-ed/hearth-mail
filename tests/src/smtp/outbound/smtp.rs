@@ -2,11 +2,14 @@
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ *
+ * Modified by Hearth Mail in 2026: schedules with room for slow runners, and
+ * the smuggling step waits for its own delivery to end.
  */
 
 use crate::{
     smtp::{
-        inbound::{TestMessage, TestQueueEvent},
+        inbound::TestMessage,
         session::{TestSession, VerifyResponse},
     },
     utils::{dns::DnsCache, server::TestServerBuilder},
@@ -121,13 +124,25 @@ async fn smtp_delivery() {
                     duration: 1_000u64.into(),
                 }]),
             }),
+            // Hearth Mail: the delivery schedules of foobar.net (this one) and
+            // foobar.org (below) are spaced wider than upstream's. The queue
+            // counts in whole seconds, retries every second and sends the
+            // next delay notice a set time after the last one went, so with
+            // upstream's one-second gaps an attempt that slipped by a second
+            // on a slow runner (GitHub, 2026-11-24) merged two notices into
+            // one DSN: both expiries (6 s and 7 s), or a delay notice with
+            // the expiry, and the test saw four DSNs instead of five. Every
+            // notice now has at least two seconds to itself; the order and
+            // content of the five DSNs is the same as upstream's:
+            //   t0 results, t2 both delayed, t5 foobar.org delayed again,
+            //   t9 foobar.org failed, t12 foobar.net failed.
             notify: MtaDeliveryScheduleIntervalsOrDefault::Custom(MtaDeliveryScheduleIntervals {
                 intervals: List::from_iter([MtaDeliveryScheduleInterval {
-                    duration: 1_000u64.into(),
+                    duration: 2_000u64.into(),
                 }]),
             }),
             expiry: MtaDeliveryExpiration::Ttl(MtaDeliveryExpirationTtl {
-                expire: 7_000u64.into(),
+                expire: 12_000u64.into(),
             }),
             queue_id,
             description: None,
@@ -144,15 +159,15 @@ async fn smtp_delivery() {
             notify: MtaDeliveryScheduleIntervalsOrDefault::Custom(MtaDeliveryScheduleIntervals {
                 intervals: List::from_iter([
                     MtaDeliveryScheduleInterval {
-                        duration: 1_000u64.into(),
+                        duration: 2_000u64.into(),
                     },
                     MtaDeliveryScheduleInterval {
-                        duration: 2_000u64.into(),
+                        duration: 3_000u64.into(),
                     },
                 ]),
             }),
             expiry: MtaDeliveryExpiration::Ttl(MtaDeliveryExpirationTtl {
-                expire: 6_000u64.into(),
+                expire: 9_000u64.into(),
             }),
             queue_id,
             description: None,
@@ -212,7 +227,10 @@ async fn smtp_delivery() {
     remote.reload_core();
     remote.expect_reload_settings().await;
 
-    // Add mock DNS entries
+    // Add mock DNS entries. Hearth Mail: they live 60 s (upstream: MX 10 s,
+    // addresses 30 s), as the wider schedules above keep foobar.net's
+    // recipient retrying for 12 s and the smuggling step runs after that; an
+    // expired mock MX turns the last attempt into a "no MX record" failure.
     for domain in ["foobar.org", "foobar.net", "foobar.com"] {
         local.server.mx_add(
             domain,
@@ -225,17 +243,17 @@ async fn smtp_delivery() {
                 preference: 10,
             }],
             DnssecStatus::Secure,
-            Instant::now() + Duration::from_secs(10),
+            Instant::now() + Duration::from_secs(60),
         );
         local.server.ipv4_add(
             format!("mx1.{domain}"),
             vec!["127.0.0.1".parse().unwrap()],
-            Instant::now() + Duration::from_secs(30),
+            Instant::now() + Duration::from_secs(60),
         );
         local.server.ipv4_add(
             format!("mx2.{domain}"),
             vec!["127.0.0.1".parse().unwrap()],
-            Instant::now() + Duration::from_secs(30),
+            Instant::now() + Duration::from_secs(60),
         );
     }
 
@@ -402,11 +420,14 @@ async fn smtp_delivery() {
         session
             .send_message("john@doe.org", &["bill@foobar.com"], &out_message, "250")
             .await;
-        local
-            .expect_message_for_queue_then_deliver("default")
-            .await
-            .try_deliver(local.server.clone());
-        local.read_event().await.assert_refresh_or_done();
+        let attempt = local.expect_message_for_queue_then_deliver("default").await;
+        let message_id = attempt.queue_id;
+        attempt.try_deliver(local.server.clone());
+        // Hearth Mail: wait for this message's own WorkerDone. The DSN loop
+        // above may leave queue events behind (a Refresh from a queued
+        // notice, a worker finishing after the queue looked empty), so the
+        // next event read is not necessarily this delivery's.
+        local.expect_worker_done(message_id).await;
 
         let message = remote.consume_message().await.read_message(&remote).await;
 

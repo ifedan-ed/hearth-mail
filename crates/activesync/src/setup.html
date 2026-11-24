@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set up mail</title>
+<style>
+  :root { --bg: #f6f7f9; --card: #fff; --text: #1c2330; --muted: #5b6472; --accent: #2f6fdb; --line: #d9dde3; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171c; --card: #1d2128; --text: #e7eaf0; --muted: #a0a8b5; --accent: #6b9cf0; --line: #333a45; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 420px; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: 22px; margin: 0 0 20px; }
+  form, section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 0 0 6px; }
+  input { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; margin-bottom: 14px; }
+  button, a.button { display: block; width: 100%; text-align: center; font: inherit; font-weight: 600; padding: 11px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; text-decoration: none; margin-top: 10px; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  p.status { min-height: 1.4em; font-size: 14px; color: var(--muted); margin: 12px 0 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Set up mail</h1>
+  <form id="signin">
+    <label for="email">Email address</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Sign in</button>
+    <p class="status" id="signin-status" role="status"></p>
+  </form>
+  <section id="actions" hidden>
+    <a class="button" id="apple" href="#" download>Download for iPhone and Mac</a>
+    <button class="secondary" id="nextcloud" type="button" hidden>Connect Nextcloud</button>
+    <p class="status" id="status" role="status"></p>
+  </section>
+</main>
+<script>
+(() => {
+  let auth = "";
+  const $ = (id) => document.getElementById(id);
+  const call = (path, method = "GET") =>
+    fetch("/setup/" + path, { method, headers: { Authorization: auth }, cache: "no-store" });
+
+  $("signin").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const user = $("email").value.trim();
+    auth = "Basic " + btoa(unescape(encodeURIComponent(user + ":" + $("password").value)));
+    $("signin-status").textContent = "";
+    const answer = await call("account");
+    if (!answer.ok) {
+      $("signin-status").textContent = "Sign-in failed";
+      return;
+    }
+    const account = await answer.json();
+    $("signin").hidden = true;
+    $("actions").hidden = false;
+    $("nextcloud").hidden = !account.cloudLink;
+    $("status").textContent = account.cloudLinked ? "Nextcloud connected" : "";
+  });
+
+  $("apple").addEventListener("click", async (event) => {
+    event.preventDefault();
+    const answer = await call("apple.mobileconfig");
+    if (!answer.ok) {
+      $("status").textContent = "Download failed";
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(await answer.blob());
+    link.download = ($("email").value.trim() || "mail") + ".mobileconfig";
+    link.click();
+  });
+
+  $("nextcloud").addEventListener("click", async () => {
+    const start = await call("nextcloud/start", "POST");
+    if (!start.ok) {
+      $("status").textContent = "Nextcloud unavailable";
+      return;
+    }
+    const { login } = await start.json();
+    window.open(login, "_blank", "noopener");
+    $("status").textContent = "Waiting for Nextcloud";
+    for (let i = 0; i < 120; i++) {
+      await new Promise((done) => setTimeout(done, 5000));
+      const poll = await call("nextcloud/poll", "POST");
+      if (poll.status === 200) {
+        $("status").textContent = "Nextcloud connected";
+        return;
+      }
+      if (poll.status !== 202) break;
+    }
+    $("status").textContent = "Not connected";
+  });
+})();
+</script>
+</body>
+</html>

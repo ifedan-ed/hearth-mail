@@ -2,7 +2,14 @@
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ *
+ * Modified by Hearth Mail in 2026: the ActiveSync protocol.
  */
+
+//! Autodiscover in its JSON dialect (`/autodiscover/autodiscover.json`),
+//! which Outlook asks first: `Protocol=AutodiscoverV1` points at the POX
+//! endpoint, `Protocol=ActiveSync` gives the ActiveSync address for
+//! domains this server serves (docs/activesync.md).
 
 use crate::{Server, manager::application::Resource};
 use utils::url_params::UrlParams;
@@ -35,7 +42,21 @@ impl Server {
                 .details("Missing domain in email address"));
         }
 
-        if protocol.eq_ignore_ascii_case("autodiscoverv1") {
+        if protocol.eq_ignore_ascii_case("activesync") {
+            if self.domain(domain).await?.is_none() {
+                return Ok(Err("{\"ErrorCode\":\"MailboxNotFound\",\
+                     \"ErrorMessage\":\"This address isn't served here.\"}"
+                    .to_string()));
+            }
+            let body = format!(
+                "{{\"Protocol\":\"ActiveSync\",\"Url\":\"{}\"}}",
+                super::autodiscover::activesync_url(&self.core.network.server_name)
+            );
+            Ok(Ok(Resource::new(
+                "application/json; charset=utf-8",
+                body.into_bytes(),
+            )))
+        } else if protocol.eq_ignore_ascii_case("autodiscoverv1") {
             let server_name = &self.core.network.server_name;
             let body = format!(
                 "{{\"Protocol\":\"AutodiscoverV1\",\
@@ -54,7 +75,7 @@ impl Server {
                 "{{\"ErrorCode\":\"InvalidProtocol\",\
                      \"ErrorMessage\":\"The given protocol value \
                      '{safe_protocol}' is invalid. \
-                     Supported values are 'AutodiscoverV1'\"}}"
+                     Supported values are 'AutodiscoverV1' and 'ActiveSync'\"}}"
             );
             Ok(Err(err))
         }

@@ -152,6 +152,8 @@ pub const KV_OAUTH_DEVICE: u8 = 201;
 pub const KV_OAUTH_REVOKED: u8 = 202;
 // inbuxa: passkeys: a registration or sign-in between its two steps
 pub const KV_PASSKEY_CEREMONY: u8 = 203;
+// Hearth Mail: ActiveSync device and folder state (crates/activesync)
+pub const KV_ACTIVESYNC: u8 = 210;
 
 #[derive(Clone)]
 pub struct Server {

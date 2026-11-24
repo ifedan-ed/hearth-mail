@@ -28,3 +28,6 @@ __pycache__/
 /deploy/compose/secrets/
 /deploy/compose/etc/
 /deploy/compose/data/
+
+# Core dumps from crashed test runs
+core.[0-9]*

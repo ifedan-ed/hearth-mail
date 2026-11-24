@@ -20,6 +20,8 @@ use tikv_jemallocator::Jemalloc;
 static GLOBAL: Jemalloc = Jemalloc;
 
 #[cfg(test)]
+pub mod activesync; // Hearth Mail
+#[cfg(test)]
 pub mod automation;
 #[cfg(test)]
 pub mod cluster;

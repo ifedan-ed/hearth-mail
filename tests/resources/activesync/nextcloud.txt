@@ -1,0 +1,197 @@
+# Calendars, contacts, tasks and notes through the DAV bridge, as iPhone
+# (16.1) uses them, against a throwaway Nextcloud (run by
+# tools/activesync/test-bridge-nextcloud.sh; skipped without one).
+#
+# Built, not recorded. Sources: [MS-ASCMD] v20250520 4.5.3 (adding an
+# item), 4.5.4 (changing one), 4.5.5 (deleting), 4.5.2 (Fetch), 4.8 (Ping),
+# 4.17 (MeetingResponse), [MS-ASCAL] 2.2.2 (calendar elements), [MS-ASCNTC],
+# [MS-ASTASK], [MS-ASNOTE] (their examples' shapes).
+
+@device ApplDAVTEST0001 iPhone Apple-iPhone16C2/2201.170 16.1 plain
+
+# With the cloud on, the profile carries CalDAV and CardDAV too.
+!setup/apple.mobileconfig
+contains <string>com.apple.caldav.account</string>
+contains <string>com.apple.carddav.account</string>
+contains <key>CalDAVPrincipalURL</key><string>http://nextcloud/remote.php/dav</string>
+
+>>> FolderSync
+<FolderSync xmlns="FolderHierarchy:"><SyncKey>0</SyncKey></FolderSync>
+<<< 200
+<FolderSync xmlns="FolderHierarchy:">
+  <Status>1</Status>
+  <SyncKey>$fs</SyncKey>
+  <Changes>
+    <Add><ServerId>$inbox</ServerId><Type>2</Type></Add>
+    <Add><ServerId>$cal</ServerId><Type>8</Type></Add>
+    <Add><ServerId>$tasks</ServerId><Type>7</Type></Add>
+    <Add><ServerId>$notes</ServerId><DisplayName>Notes</DisplayName><Type>10</Type></Add>
+    <Add><ServerId>$contacts</ServerId><Type>9</Type></Add>
+  </Changes>
+</FolderSync>
+
+>>> Sync
+<Sync xmlns="AirSync:"><Collections>
+  <Collection><SyncKey>0</SyncKey><CollectionId>$cal</CollectionId></Collection>
+  <Collection><SyncKey>0</SyncKey><CollectionId>$contacts</CollectionId></Collection>
+  <Collection><SyncKey>0</SyncKey><CollectionId>$tasks</CollectionId></Collection>
+  <Collection><SyncKey>0</SyncKey><CollectionId>$notes</CollectionId></Collection>
+</Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:"><Collections>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$cal</CollectionId><Status>1</Status></Collection>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$contacts</CollectionId><Status>1</Status></Collection>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$tasks</CollectionId><Status>1</Status></Collection>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$notes</CollectionId><Status>1</Status></Collection>
+</Collections></Sync>
+
+# One new item of each kind from the phone.
+>>> Sync
+<Sync xmlns="AirSync:" xmlns:calendar="Calendar:" xmlns:contacts="Contacts:" xmlns:tasks="Tasks:" xmlns:notes="Notes:" xmlns:airsyncbase="AirSyncBase:">
+<Collections>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$cal</CollectionId><Commands>
+    <Add><ClientId>ev1</ClientId><ApplicationData>
+      <calendar:Subject>Lunch</calendar:Subject>
+      <calendar:StartTime>20261201T120000Z</calendar:StartTime>
+      <calendar:EndTime>20261201T130000Z</calendar:EndTime>
+      <calendar:AllDayEvent>0</calendar:AllDayEvent>
+      <calendar:BusyStatus>2</calendar:BusyStatus>
+      <calendar:Sensitivity>0</calendar:Sensitivity>
+      <calendar:MeetingStatus>0</calendar:MeetingStatus>
+    </ApplicationData></Add>
+  </Commands></Collection>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$contacts</CollectionId><Commands>
+    <Add><ClientId>c1</ClientId><ApplicationData>
+      <contacts:FirstName>Anat</contacts:FirstName>
+      <contacts:LastName>Kerry</contacts:LastName>
+      <contacts:Email1Address>anat@fourthcoffee.com</contacts:Email1Address>
+    </ApplicationData></Add>
+  </Commands></Collection>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$tasks</CollectionId><Commands>
+    <Add><ClientId>t1</ClientId><ApplicationData>
+      <tasks:Subject>Buy milk</tasks:Subject>
+      <tasks:Complete>0</tasks:Complete>
+    </ApplicationData></Add>
+  </Commands></Collection>
+  <Collection><SyncKey>1</SyncKey><CollectionId>$notes</CollectionId><Commands>
+    <Add><ClientId>n1</ClientId><ApplicationData>
+      <notes:Subject>Ideas</notes:Subject>
+      <airsyncbase:Body><airsyncbase:Type>1</airsyncbase:Type><airsyncbase:Data>Write the docs.</airsyncbase:Data></airsyncbase:Body>
+    </ApplicationData></Add>
+  </Commands></Collection>
+</Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:"><Collections>
+  <Collection><SyncKey>$calk</SyncKey><CollectionId>$cal</CollectionId><Status>1</Status>
+    <Responses><Add><ClientId>ev1</ClientId><ServerId>$ev</ServerId><Status>1</Status></Add></Responses></Collection>
+  <Collection><SyncKey>$conk</SyncKey><CollectionId>$contacts</CollectionId><Status>1</Status>
+    <Responses><Add><ClientId>c1</ClientId><ServerId>$card</ServerId><Status>1</Status></Add></Responses></Collection>
+  <Collection><SyncKey>$taskk</SyncKey><CollectionId>$tasks</CollectionId><Status>1</Status>
+    <Responses><Add><ClientId>t1</ClientId><Status>1</Status></Add></Responses></Collection>
+  <Collection><SyncKey>$notek</SyncKey><CollectionId>$notes</CollectionId><Status>1</Status>
+    <Responses><Add><ClientId>n1</ClientId><Status>1</Status></Add></Responses></Collection>
+</Collections></Sync>
+
+# The event is moved on the phone, then read back.
+>>> Sync
+<Sync xmlns="AirSync:" xmlns:calendar="Calendar:"><Collections>
+  <Collection><SyncKey>$calk</SyncKey><CollectionId>$cal</CollectionId><Commands>
+    <Change><ServerId>$ev</ServerId><ApplicationData>
+      <calendar:Subject>Lunch moved</calendar:Subject>
+      <calendar:StartTime>20261201T130000Z</calendar:StartTime>
+      <calendar:EndTime>20261201T140000Z</calendar:EndTime>
+    </ApplicationData></Change>
+    <Fetch><ServerId>$ev</ServerId></Fetch>
+  </Commands></Collection>
+</Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:calendar="Calendar:"><Collections>
+  <Collection><SyncKey>$calk2</SyncKey><Status>1</Status>
+    <Responses><Fetch><ServerId>$ev</ServerId><Status>1</Status><ApplicationData>
+      <calendar:Subject>Lunch moved</calendar:Subject>
+      <calendar:StartTime>20261201T130000Z</calendar:StartTime>
+    </ApplicationData></Fetch></Responses>
+  </Collection>
+</Collections></Sync>
+
+# Someone adds an event in Nextcloud: Ping notices, Sync brings it.
+!dav-put calendars/ann@example.com/personal/from-the-cloud.ics
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//Other client//EN
+BEGIN:VEVENT
+UID:from-the-cloud@example.org
+DTSTAMP:20261123T100000Z
+DTSTART:20261203T080000Z
+DTEND:20261203T083000Z
+SUMMARY:From the cloud
+END:VEVENT
+END:VCALENDAR
+!end
+
+>>> Ping
+<Ping xmlns="Ping:"><HeartbeatInterval>120</HeartbeatInterval>
+  <Folders><Folder><Id>$cal</Id><Class>Calendar</Class></Folder></Folders></Ping>
+<<< 200
+<Ping xmlns="Ping:"><Status>2</Status><Folders><Folder>$cal</Folder></Folders></Ping>
+
+>>> Sync
+<Sync xmlns="AirSync:"><Collections>
+  <Collection><SyncKey>$calk2</SyncKey><CollectionId>$cal</CollectionId></Collection>
+</Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:calendar="Calendar:"><Collections>
+  <Collection><SyncKey>$calk3</SyncKey><Status>1</Status><Commands>
+    <Add><ServerId>$cloud</ServerId><ApplicationData><calendar:Subject>From the cloud</calendar:Subject></ApplicationData></Add>
+  </Commands></Collection>
+</Collections></Sync>
+
+# An invitation by mail, accepted on the phone.
+!deliver-invite Planning
+>>> Sync
+<Sync xmlns="AirSync:"><Collections><Collection><SyncKey>0</SyncKey><CollectionId>$inbox</CollectionId></Collection></Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:"><Collections><Collection><SyncKey>1</SyncKey><Status>1</Status></Collection></Collections></Sync>
+
+>>> Sync
+<Sync xmlns="AirSync:"><Collections><Collection><SyncKey>1</SyncKey><CollectionId>$inbox</CollectionId><WindowSize>5</WindowSize></Collection></Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:email="Email:"><Collections><Collection><Status>1</Status><Commands>
+  <Add><ServerId>$invite</ServerId><ApplicationData><email:Subject>Planning</email:Subject></ApplicationData></Add>
+</Commands></Collection></Collections></Sync>
+
+>>> MeetingResponse
+<MeetingResponse xmlns="MeetingResponse:"><Request>
+  <UserResponse>1</UserResponse>
+  <CollectionId>$inbox</CollectionId>
+  <RequestId>$invite</RequestId>
+</Request></MeetingResponse>
+<<< 200
+<MeetingResponse xmlns="MeetingResponse:"><Result>
+  <RequestId>$invite</RequestId><Status>1</Status><CalendarId>$accepted</CalendarId>
+</Result></MeetingResponse>
+
+# The accepted event is in the cloud; the device already has it, so the
+# calendar has nothing new to send.
+>>> Sync
+<Sync xmlns="AirSync:" xmlns:calendar="Calendar:"><Collections>
+  <Collection><SyncKey>$calk3</SyncKey><CollectionId>$cal</CollectionId><Commands>
+    <Fetch><ServerId>$accepted</ServerId></Fetch>
+  </Commands></Collection>
+</Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:" xmlns:calendar="Calendar:"><Collections>
+  <Collection><Status>1</Status><Responses><Fetch><ServerId>$accepted</ServerId><Status>1</Status>
+    <ApplicationData><calendar:Subject>Planning</calendar:Subject></ApplicationData>
+  </Fetch></Responses></Collection>
+</Collections></Sync>
+
+# The phone deletes its lunch.
+>>> Sync
+<Sync xmlns="AirSync:"><Collections>
+  <Collection><SyncKey>$calk3</SyncKey><CollectionId>$cal</CollectionId><Commands>
+    <Delete><ServerId>$ev</ServerId></Delete>
+  </Commands></Collection>
+</Collections></Sync>
+<<< 200
+<Sync xmlns="AirSync:"><Collections><Collection><Status>1</Status></Collection></Collections></Sync>

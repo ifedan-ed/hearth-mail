@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  *
  * Modified by Coffey Labs in 2026 for INBUXA.
+ * Modified by Hearth Mail in 2026: expect_worker_done.
  */
 
 use crate::utils::server::TestServer;
@@ -87,6 +88,25 @@ impl TestServer {
                 ),
             }
         }
+    }
+
+    /// Hearth Mail: waits for the worker delivering `queue_id` to finish
+    /// (completed or deferred), setting aside any other event that comes
+    /// first. Tests that ran the queue before (DSN loops) can leave a
+    /// Refresh or another worker's WorkerDone behind, so "the next event"
+    /// is not reliably the one a delivery attempt sends.
+    pub async fn expect_worker_done(&mut self, queue_id: QueueId) {
+        self.read_event_matching(|event| {
+            matches!(
+                event,
+                QueueEvent::WorkerDone {
+                    queue_id: id,
+                    status: QueueEventStatus::Completed | QueueEventStatus::Deferred,
+                    ..
+                } if *id == queue_id
+            )
+        })
+        .await;
     }
 
     pub async fn try_read_event(&mut self) -> Option<QueueEvent> {

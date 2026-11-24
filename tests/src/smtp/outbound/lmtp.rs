@@ -2,6 +2,8 @@
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ *
+ * Modified by Hearth Mail in 2026: later expiries, for slow runners.
  */
 
 use crate::{
@@ -125,8 +127,15 @@ async fn lmtp_delivery() {
                     },
                 ]),
             }),
+            // Hearth Mail: expiries 3 s later than upstream's. The queue
+            // counts in whole seconds and the next delay notice is due
+            // `notify` seconds after the last one went, so a delivery
+            // attempt that slips by a second on a slow runner pushed the
+            // second "delayed" notice onto the expiry, and the test saw one
+            // notice fewer (GitHub runs of 2026-11-24). The margin keeps
+            // every notice before expiry; the order of events is the same.
             expiry: MtaDeliveryExpiration::Ttl(MtaDeliveryExpirationTtl {
-                expire: 4_000u64.into(),
+                expire: 7_000u64.into(),
             }),
             queue_id,
             description: None,
@@ -146,7 +155,7 @@ async fn lmtp_delivery() {
                 }]),
             }),
             expiry: MtaDeliveryExpiration::Ttl(MtaDeliveryExpirationTtl {
-                expire: 5_000u64.into(),
+                expire: 8_000u64.into(),
             }),
             queue_id,
             description: None,

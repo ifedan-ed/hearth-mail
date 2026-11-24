@@ -499,6 +499,26 @@ impl ParseHttp for Server {
                         )
                         .await
                         .map(|resource| resource.into_http_response().with_sandbox_policy());
+                } else if req.method() == Method::POST
+                    && document_name.eq_ignore_ascii_case("autodiscover.svc")
+                {
+                    // Hearth Mail: the SOAP dialect (MS-OXWSADISC)
+                    self.is_http_anonymous_request_allowed(session.remote_ip)
+                        .await?;
+
+                    return self
+                        .handle_autodiscover_soap_request(
+                            fetch_body(&mut req, 65536, session.session_id).await,
+                        )
+                        .await
+                        .map(|(status, resource)| {
+                            let mut response = resource.into_http_response().with_sandbox_policy();
+                            if status != 200 {
+                                response =
+                                    response.with_status_code(StatusCode::INTERNAL_SERVER_ERROR);
+                            }
+                            response
+                        });
                 } else if document_name.eq_ignore_ascii_case("autodiscover.json") {
                     // Limit anonymous requests
                     self.is_http_anonymous_request_allowed(session.remote_ip)
@@ -521,6 +541,29 @@ impl ParseHttp for Server {
                             .with_sandbox_policy()
                         });
                 }
+            }
+            // Hearth Mail: the device setup page (docs/activesync.md)
+            "setup" => {
+                let rest = path.collect::<Vec<_>>().join("/");
+                if rest.is_empty() {
+                    self.is_http_anonymous_request_allowed(session.remote_ip)
+                        .await?;
+                    return Ok(activesync::setup::page());
+                }
+                let (_in_flight, access_token) = self.authenticate_headers(&req, &session).await?;
+                return activesync::setup::handle(
+                    self,
+                    &rest,
+                    req.method(),
+                    &session,
+                    &access_token,
+                )
+                .await;
+            }
+            // Hearth Mail: Exchange ActiveSync (docs/activesync.md)
+            name if name.eq_ignore_ascii_case("Microsoft-Server-ActiveSync") => {
+                let (_in_flight, access_token) = self.authenticate_headers(&req, &session).await?;
+                return activesync::handle(self, &mut req, &session, &access_token).await;
             }
             "robots.txt" => {
                 // Limit anonymous requests

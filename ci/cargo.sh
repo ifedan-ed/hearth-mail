@@ -10,7 +10,9 @@
 #     default 8) and cargo's parallel jobs (HM_JOBS, default 8);
 #   - keeps the cargo registry and the target directory in named volumes
 #     (hearth-mail-cargo, and hearth-mail-target or HM_TARGET), so repeat builds are incremental
-#     and nothing is written into the checkout as root.
+#     and nothing is written into the checkout as root;
+#   - turns core dumps off: a crashed test once left a 220 MB core file in
+#     the checkout (tests/core.7), which then got committed.
 #
 # Examples:
 #   ci/cargo.sh build -p inbuxa --locked
@@ -27,6 +29,7 @@ run=(docker run --rm --init
   --name "hearth-mail-cargo-$$"
   --memory "${HM_MEM:-16g}" --memory-swap "${HM_MEM:-16g}"
   --cpus "${HM_CPUS:-8}"
+  --ulimit core=0
   -e CARGO_BUILD_JOBS="${HM_JOBS:-8}"
   -e CARGO_TARGET_DIR=/target
   -e RUST_MIN_STACK=8388608

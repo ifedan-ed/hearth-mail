@@ -11,6 +11,7 @@ trc = { path = "../trc" }
 email = { path = "../email" }
 smtp = { path = "../smtp" }
 jmap = { path = "../jmap" }
+activesync = { path = "../activesync" }
 scim = { path = "../scim" }
 scim-proto = { path = "../scim-proto" }
 http_proto = { path = "../http-proto" }

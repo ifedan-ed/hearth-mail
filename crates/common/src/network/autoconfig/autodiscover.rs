@@ -4,7 +4,14 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  *
  * Modified by Coffey Labs in 2026 for INBUXA.
+ * Modified by Hearth Mail in 2026: the ActiveSync (mobilesync) schema.
  */
+
+//! Autodiscover in its POX dialect: `POST /autodiscover/autodiscover.xml`
+//! with the address and the response schema the client accepts. Outlook's
+//! schema lists the IMAP, POP3 and SMTP settings; ActiveSync's (mobilesync,
+//! [MS-ASCMD] 2.2.1.1) gives the ActiveSync address, for domains this
+//! server serves.
 
 use crate::{Server, manager::application::Resource};
 use quick_xml::Reader;
@@ -35,6 +42,14 @@ impl Server {
         };
 
         let response = match request.response_schema {
+            // Hearth Mail: ActiveSync devices (docs/activesync.md)
+            ResponseSchema::MobileSync => match request.email.rsplit_once('@') {
+                Some((_, domain)) if self.domain(domain).await?.is_some() => {
+                    build_mobilesync_response(&request.email, &self.core.network.server_name)
+                }
+                _ => build_mobilesync_error(&request.email),
+            }
+            .into_bytes(),
             ResponseSchema::Outlook => build_autodiscover_response(
                 &request.email,
                 &self.core.network.server_name,
@@ -52,6 +67,57 @@ impl Server {
 const OUTLOOK_RESPONSE_SCHEMA: &str =
     "http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a";
 
+const MOBILESYNC_RESPONSE_SCHEMA: &str =
+    "http://schemas.microsoft.com/exchange/autodiscover/mobilesync/responseschema/2006";
+
+/// Where ActiveSync is served, under the server's own name.
+pub fn activesync_url(server_name: &str) -> String {
+    format!("https://{server_name}/Microsoft-Server-ActiveSync")
+}
+
+/// The mobilesync answer with the ActiveSync address, as in [MS-ASCMD]
+/// 4.2.4. `Url` and `Name` carry the same address, as Exchange sends them.
+fn build_mobilesync_response(email: &str, server_name: &str) -> String {
+    let email = escape(email);
+    let url = escape(activesync_url(server_name));
+    format!(
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\
+         <Autodiscover xmlns=\"http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006\">\n\
+         \t<Response xmlns=\"{MOBILESYNC_RESPONSE_SCHEMA}\">\n\
+         \t\t<Culture>en:us</Culture>\n\
+         \t\t<User>\n\t\t\t<DisplayName>{email}</DisplayName>\n\
+         \t\t\t<EMailAddress>{email}</EMailAddress>\n\t\t</User>\n\
+         \t\t<Action>\n\t\t\t<Settings>\n\t\t\t\t<Server>\n\
+         \t\t\t\t\t<Type>MobileSync</Type>\n\
+         \t\t\t\t\t<Url>{url}</Url>\n\
+         \t\t\t\t\t<Name>{url}</Name>\n\
+         \t\t\t\t</Server>\n\t\t\t</Settings>\n\t\t</Action>\n\
+         \t</Response>\n\
+         </Autodiscover>\n"
+    )
+}
+
+/// The mobilesync error for an address this server doesn't serve, shaped as
+/// [MS-ASCMD] 4.2.2 (status 2, a protocol error), so the device asks the
+/// person for the settings instead.
+fn build_mobilesync_error(email: &str) -> String {
+    let email = escape(email);
+    format!(
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\
+         <Autodiscover xmlns=\"http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006\">\n\
+         \t<Response xmlns=\"{MOBILESYNC_RESPONSE_SCHEMA}\">\n\
+         \t\t<Culture>en:us</Culture>\n\
+         \t\t<User>\n\t\t\t<EMailAddress>{email}</EMailAddress>\n\t\t</User>\n\
+         \t\t<Action>\n\t\t\t<Error>\n\
+         \t\t\t\t<Status>2</Status>\n\
+         \t\t\t\t<Message>This address isn't served here</Message>\n\
+         \t\t\t\t<DebugData />\n\
+         \t\t\t</Error>\n\t\t</Action>\n\
+         \t</Response>\n\
+         </Autodiscover>\n"
+    )
+}
+
 const PROVIDER_NOT_AVAILABLE_RESPONSE: &str = concat!(
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n",
     "<Autodiscover xmlns=\"http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006\">\n",
@@ -68,13 +134,19 @@ const PROVIDER_NOT_AVAILABLE_RESPONSE: &str = concat!(
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ResponseSchema {
     Outlook,
+    MobileSync,
     Unsupported,
 }
 
 impl ResponseSchema {
     fn parse(value: &str) -> Self {
-        if value.trim().eq_ignore_ascii_case(OUTLOOK_RESPONSE_SCHEMA) {
+        // Whitespace inside the value is ignored: the specification's own
+        // example wraps it over two lines.
+        let value: String = value.split_whitespace().collect();
+        if value.eq_ignore_ascii_case(OUTLOOK_RESPONSE_SCHEMA) {
             ResponseSchema::Outlook
+        } else if value.eq_ignore_ascii_case(MOBILESYNC_RESPONSE_SCHEMA) {
+            ResponseSchema::MobileSync
         } else {
             ResponseSchema::Unsupported
         }
@@ -347,7 +419,7 @@ mod tests {
                 </Request>
             </Autodiscover>"#
                 ),
-                ResponseSchema::Unsupported,
+                ResponseSchema::MobileSync,
             ),
             (
                 format!(
@@ -360,6 +432,28 @@ mod tests {
                 </Request>
             </Autodiscover>"#
                 ),
+                ResponseSchema::MobileSync,
+            ),
+            (
+                // [MS-ASCMD] 4.2.1, as printed: the schema wrapped over lines.
+                r#"<?xml version="1.0" encoding="utf-8"?>
+    <Autodiscover
+    xmlns="http://schemas.microsoft.com/exchange/autodiscover/mobilesync/requestschema/2006">
+       <Request>
+          <EMailAddress>email@example.com</EMailAddress>
+          <AcceptableResponseSchema>
+          http://schemas.microsoft.com/exchange/autodiscover/mobilesync/
+          responseschema/2006
+          </AcceptableResponseSchema>
+       </Request>
+    </Autodiscover>"#
+                    .to_string(),
+                ResponseSchema::MobileSync,
+            ),
+            (
+                r#"<Autodiscover><Request><EMailAddress>email@example.com</EMailAddress>
+                <AcceptableResponseSchema>urn:other</AcceptableResponseSchema></Request></Autodiscover>"#
+                    .to_string(),
                 ResponseSchema::Unsupported,
             ),
         ] {
@@ -385,6 +479,20 @@ mod tests {
                 "{request}"
             );
         }
+    }
+
+    #[test]
+    fn mobilesync_answer() {
+        let xml = super::build_mobilesync_response("a&b@example.org", "mail.example.org");
+        assert!(xml.contains("<Type>MobileSync</Type>"), "{xml}");
+        assert!(
+            xml.contains("<Url>https://mail.example.org/Microsoft-Server-ActiveSync</Url>"),
+            "{xml}"
+        );
+        assert!(xml.contains("a&amp;b@example.org"), "{xml}");
+        let error = super::build_mobilesync_error("x@elsewhere.test");
+        assert!(error.contains("<Status>2</Status>"), "{error}");
+        assert!(!error.contains("MobileSync</Type>"), "{error}");
     }
 
     #[test]
