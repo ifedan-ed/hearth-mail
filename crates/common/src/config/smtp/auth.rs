@@ -378,3 +378,66 @@ impl CacheItemWeight for DkimSigners {
             + std::mem::size_of::<Dkim2Signer<Dkim2Done>>()) as u64
     }
 }
+
+/// What the server ships with for checking senders and spam. the maintainer's rule
+/// (2026-11-25, "please don't reject, don't want to lose mails"): a message
+/// that fails SPF, DKIM, DMARC (even under the sender's `p=reject`) or the
+/// spam filter goes to Junk; nothing is refused in the SMTP session because
+/// of those checks unless an administrator chooses to. A refusal made in
+/// error loses real mail, a message in Junk can still be found. These
+/// tests hold the shipped defaults to that rule (docs/decisions.md,
+/// "Junk, not refusal").
+#[cfg(test)]
+mod shipped_defaults {
+    use registry::schema::structs::{Expression, SenderAuth, SpamSettings};
+
+    /// Every result the expression can give, its branches and its default.
+    fn outcomes(expr: &Expression) -> Vec<&str> {
+        expr.match_
+            .iter()
+            .map(|branch| branch.then.as_str())
+            .chain([expr.else_.as_str()])
+            .collect()
+    }
+
+    #[test]
+    fn sender_checks_never_refuse() {
+        let auth = SenderAuth::default();
+        for (name, expr) in [
+            ("dkimVerify", &auth.dkim_verify),
+            ("spfEhloVerify", &auth.spf_ehlo_verify),
+            ("spfFromVerify", &auth.spf_from_verify),
+            ("dmarcVerify", &auth.dmarc_verify),
+            ("reverseIpVerify", &auth.reverse_ip_verify),
+            ("arcVerify", &auth.arc_verify),
+        ] {
+            for outcome in outcomes(expr) {
+                assert!(
+                    matches!(outcome, "relaxed" | "disable"),
+                    "{name} ships with {outcome:?}: a strict check refuses mail in the session"
+                );
+            }
+        }
+        // DMARC is checked on the MX port, so p=reject failures are scored
+        // (DMARC_POLICY_REJECT) and filed in Junk rather than ignored.
+        assert!(
+            outcomes(&auth.dmarc_verify).contains(&"relaxed"),
+            "dmarcVerify must stay on (relaxed) for incoming mail"
+        );
+    }
+
+    #[test]
+    fn spam_filter_files_in_junk() {
+        let spam = SpamSettings::default();
+        assert_eq!(
+            spam.score_reject.into_inner(),
+            0.0,
+            "scoreReject ships off: spam goes to Junk, not refused"
+        );
+        assert_eq!(
+            spam.score_discard.into_inner(),
+            0.0,
+            "scoreDiscard ships off: spam is never dropped unseen"
+        );
+    }
+}
