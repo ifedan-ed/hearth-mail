@@ -70,7 +70,7 @@ reach a real domain or the host's own mail server.
 - smoke.py: the 45 basic checks (as before).
 - e2e.py: outbound delivery through MX lookup with DKIM verified, bounces,
   vacation replies; inbound SPF, DKIM, DMARC and iprev, forged senders
-  with DMARC relaxed and strict; a 30 MB attachment through SMTP, IMAP and
+  filed in Junk (never refused), the shipped sender-check settings; a 30 MB attachment through SMTP, IMAP and
   JMAP and a refused 108 MB one; disk quotas; search in 2,000 messages;
   JMAP WebSocket push; app passwords; autoconfig and Autodiscover.
 - tools/activesync/replay.py: the ActiveSync session files the `tests`

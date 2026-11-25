@@ -17,8 +17,9 @@ What it checks, one line each:
   its DKIM key, DMARC pass) lands in the Inbox with an
   Authentication-Results header saying so; mail claiming example.org or the
   server's own domain from an address their SPF doesn't allow goes to Junk
-  with dmarc=fail as shipped (dmarcVerify "relaxed"), and is refused in
-  the session with dmarcVerify "strict".
+  with dmarc=fail, never refused: the shipped settings check senders
+  "relaxed" and the spam filter has no reject score (the maintainer, 2026-11-25:
+  "please don't reject, don't want to lose mails").
 - Big messages: a 30 MB attachment survives submission, IMAP and JMAP
   byte for byte; a message over the 100 MB SMTP limit is refused.
 - Quotas: JMAP Quota/get and IMAP GETQUOTAROOT report the limit and the
@@ -364,9 +365,9 @@ def inbound_checks(users):
     note(f'spam status of the good message: {spam}')
 
     # DMARC p=reject: example.org's SPF allows nobody here, no signature.
-    # With the shipped setting (dmarcVerify "relaxed" on port 25) the
-    # result is recorded and the spam filter scores it (DMARC_POLICY_REJECT):
-    # the message goes to Junk, not the Inbox.
+    # The result is recorded and the spam filter scores it
+    # (DMARC_POLICY_REJECT): the message goes to Junk, not the Inbox, and is
+    # never refused (a refusal in error would lose real mail).
     def spoof(frm, label):
         subject = f'{label} {secrets.token_hex(4)}'
         err = deliver_25(frm, erin[0], message(frm, erin[0], subject))
@@ -375,32 +376,26 @@ def inbound_checks(users):
         return err, inbox, junk
     err, inbox, junk = spoof('ceo@example.org', 'Spoofed')
     check(err is None and not inbox and junk and b'dmarc=fail' in junk,
-          'inbound (dmarcVerify relaxed, as shipped): mail failing DMARC p=reject goes to Junk with dmarc=fail',
+          'inbound: mail failing DMARC p=reject goes to Junk with dmarc=fail, not refused',
           f'refused: {err}' if err else f'inbox={bool(inbox)} junk={bool(junk)}')
     err, inbox, junk = spoof('boss@alpha.test', 'Own domain forged')
     check(err is None and not inbox and junk and b'dmarc=fail' in junk,
-          "inbound (relaxed): mail forging the server's own domain from outside goes to Junk",
+          "inbound: mail forging the server's own domain from outside goes to Junk, not refused",
           f'refused: {err}' if err else f'inbox={bool(inbox)} junk={bool(junk)}')
-    # With dmarcVerify "strict" the policy is enforced in the SMTP session.
+    # The shipped setting itself: DMARC checked on the MX port, relaxed,
+    # never strict (the maintainer, 2026-11-25: "please don't reject, don't want to
+    # lose mails"; docs/decisions.md, "Junk, not refusal").
     admin = admin_creds()
-    registry(admin, 'x:SenderAuth/set', {'update': {'singleton': {'dmarcVerify': {
-        'match': {'0': {'if': 'local_port == 25', 'then': 'strict'}}, 'else': 'disable'}}}})
-    time.sleep(2)
-    try:
-        for frm, label, what in (('ceo@example.org', 'Spoofed strict', 'another domain'),
-                                 ('boss@alpha.test', 'Own domain strict', "the server's own domain")):
-            err, inbox, junk = spoof(frm, label)
-            check(err is not None and '5.7' in str(err) and not inbox and not junk,
-                  f'inbound (dmarcVerify strict): forging {what} is refused in the session (5.7.x)',
-                  err or f'accepted: inbox={bool(inbox)} junk={bool(junk)}')
-        subject = f'Good under strict {secrets.token_hex(4)}'
-        err = deliver_25('pat@example.net', erin[0],
-                         signed(message('pat@example.net', erin[0], subject, 'Still fine.')))
-        check(err is None and wait_for(lambda: imap_find(erin[:2], subject)),
-              'inbound (strict): signed mail passing DMARC still reaches the Inbox', err)
-    finally:
-        registry(admin, 'x:SenderAuth/set', {'update': {'singleton': {'dmarcVerify': {
-            'match': {'0': {'if': 'local_port == 25', 'then': 'relaxed'}}, 'else': 'disable'}}}})
+    auth = registry(admin, 'x:SenderAuth/get', {'ids': ['singleton']})[1]['list'][0]
+    outcomes = {key: [m['then'] for m in auth[key]['match'].values()] + [auth[key]['else']]
+                for key in ('dmarcVerify', 'spfFromVerify', 'spfEhloVerify', 'dkimVerify',
+                            'reverseIpVerify', 'arcVerify')}
+    check(all(o in ('relaxed', 'disable') for v in outcomes.values() for o in v)
+          and 'relaxed' in outcomes['dmarcVerify'],
+          'inbound: shipped sender checks are relaxed (Junk, never refused in the session)', outcomes)
+    spam = registry(admin, 'x:SpamSettings/get', {'ids': ['singleton']})[1]['list'][0]
+    check(not spam.get('scoreReject') and not spam.get('scoreDiscard'),
+          'spam filter: shipped with no reject or discard score (spam goes to Junk)', spam)
 
     # A signed message changed in transit: DKIM fails, SPF still passes,
     # so DMARC passes on SPF (as it should) and the message is accepted.

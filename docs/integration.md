@@ -1,7 +1,12 @@
 # Integration with Nextcloud and Hearth
 
 Status: sections 1b and 2 (the $itip keyword) are built; the rest is a
-plan. Hearth Mail serves mail only; contacts,
+plan. Since 2026-11-25 the plan for Hearth is native integration, with
+Hearth as the one place for calendars, contacts, files, sign-in and
+search: Hearth's docs/mail-integration.md (invitations into Hearth
+Calendar on arrival, contacts and the directory from Hearth, app passwords
+checked by Hearth, ActiveSync's DAV bridge pointed at Hearth). The
+Nextcloud parts below stay for installations without Hearth. Hearth Mail serves mail only; contacts,
 calendars and files live in Nextcloud (cloud.example.org) now and in Hearth
 later. This page says how the pieces meet. Each part works with Hearth Mail
 alone too: a standard mail client never needs any of it.
