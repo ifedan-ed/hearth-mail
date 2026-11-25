@@ -12,6 +12,10 @@
 # the checks. Ports (127.0.0.1): SMTP 22525, submissions 22465, submission
 # 22587, IMAP 22143, IMAPS 22993, POP3S 22995, ManageSieve 24190, HTTP
 # 28080, HTTPS 28443, console 28081.
+#
+# For the end-to-end run (tools/hearth/e2e/run.sh): HM_PROOF_SUBNET makes
+# the network with a fixed subnet, and HM_PROOF_SERVER_ARGS adds docker run
+# arguments to the server (its address, its DNS resolver, more settings).
 set -euo pipefail
 dir="${HM_PROOF_DIR:-/srv/hearth-mail-proof}"
 net=hmproof
@@ -27,7 +31,8 @@ up)
   [ -s "$dir/pg-password" ] || (umask 077; head -c 24 /dev/urandom | base64 | tr -d '/+=' > "$dir/pg-password")
   [ -s "$dir/recovery-admin" ] || (umask 077; printf 'admin:%s' "$(head -c 18 /dev/urandom | base64 | tr -d '/+=')" > "$dir/recovery-admin")
   chown -R 2000:2000 "$dir/etc" "$dir/data" "$dir/recovery-admin"
-  docker network inspect "$net" >/dev/null 2>&1 || docker network create "$net" >/dev/null
+  docker network inspect "$net" >/dev/null 2>&1 ||
+    docker network create ${HM_PROOF_SUBNET:+--subnet "$HM_PROOF_SUBNET"} "$net" >/dev/null
   docker run -d --name hmproof-pg --network "$net" --memory 1g \
     -e POSTGRES_DB=inbuxa -e POSTGRES_USER=inbuxa -e POSTGRES_PASSWORD_FILE=/run/pg-password \
     -v "$dir/pg-password:/run/pg-password:ro" -v "$dir/pg:/var/lib/postgresql/data" \
@@ -45,13 +50,13 @@ up)
     -p 127.0.0.1:22525:25 -p 127.0.0.1:22465:465 -p 127.0.0.1:22587:587 \
     -p 127.0.0.1:22143:143 -p 127.0.0.1:22993:993 -p 127.0.0.1:22995:995 \
     -p 127.0.0.1:24190:4190 -p 127.0.0.1:28080:8080 -p 127.0.0.1:28443:443 \
-    "$image" >/dev/null
+    ${HM_PROOF_SERVER_ARGS:-} "$image" >/dev/null
   docker run -d --name hmproof-admin --network "$net" --cap-drop ALL --memory 128m \
     -e API_BASE_URL=http://127.0.0.1:28080 -p 127.0.0.1:28081:8080 "$admin_image" >/dev/null
   echo "up: $image (state in $dir)"
   ;;
 down)
-  docker rm -f hmproof-admin hmproof-server hmproof-pg >/dev/null 2>&1 || true
+  docker rm -f hmproof-admin hmproof-server hmproof-pg hmproof-dns hmproof-sink >/dev/null 2>&1 || true
   docker network rm "$net" >/dev/null 2>&1 || true
   rm -rf "$dir"
   echo "down: containers, network and $dir removed"

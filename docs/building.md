@@ -55,6 +55,36 @@ inbuxa image. The commit goes into the binary (`INBUXA_REVISION`, shown by
 `/.well-known/source`) and into the image label. Tag:
 `hearth-mail:<12-character commit>`.
 
+## The end-to-end test bed
+
+tools/hearth/e2e/ proves a release image as a running server, from the
+outside, as mail clients and other mail servers meet it. Nothing in it can
+reach a real domain or the host's own mail server.
+
+- run.sh up IMAGE: the throwaway of tools/hearth/throwaway.sh (Postgres,
+  the server, the console, 127.0.0.1 ports only) on a network with a fixed
+  subnet (172.29.77.0/24), plus Unbound as the server's only resolver
+  (test zones from local data, "no such name" for everything else) and
+  sink.py, a stand-in remote mail server with STARTTLS. run.sh down
+  removes all of it.
+- smoke.py: the 45 basic checks (as before).
+- e2e.py: outbound delivery through MX lookup with DKIM verified, bounces,
+  vacation replies; inbound SPF, DKIM, DMARC and iprev, forged senders
+  with DMARC relaxed and strict; a 30 MB attachment through SMTP, IMAP and
+  JMAP and a refused 108 MB one; disk quotas; search in 2,000 messages;
+  JMAP WebSocket push; app passwords; autoconfig and Autodiscover.
+- tools/activesync/replay.py: the ActiveSync session files the `tests`
+  crate replays in process (iPhone, Android, Outlook), sent to the running
+  image over HTTPS, with the WBXML code pages read from the server's own
+  table.
+- load.py: concurrent SMTP senders, IMAP and JMAP clients for a minute;
+  every accepted message must be delivered and no request may fail.
+- all.sh IMAGE runs them in order. e2e.py and load.py need dkimpy, pynacl,
+  dnspython and websockets (a venv named by `PYTHON`); the rest is the
+  standard library.
+
+Results are recorded in docs/progress.md.
+
 ## CI
 
 .forgejo/workflows/ci.yml, on the projects org's runner netcup-rootless

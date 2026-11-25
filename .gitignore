@@ -5,6 +5,8 @@
 *.failed
 *_failed
 run.sh
+# The end-to-end test bed's script is ours (the line above is for local run scripts).
+!tools/hearth/e2e/run.sh
 .*
 !.gitignore
 !.forgejo

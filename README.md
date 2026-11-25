@@ -117,6 +117,15 @@ and the integration suites that touch it, for example:
     STORE=RocksDb ci/cargo.sh test -p tests activesync -- --test-threads=1
     tools/activesync/test-bridge-nextcloud.sh   # ActiveSync with a throwaway Nextcloud
 
+A release image is tested end to end on a throwaway test bed with its own
+DNS (test domains with SPF, DKIM and DMARC) and a stand-in remote mail
+server: SMTP in and out with DKIM, SPF and DMARC, IMAP, POP3, JMAP and its
+push, Sieve, the spam filter, big attachments, quotas, search, app
+passwords, discovery, the ActiveSync device replays and a load of
+concurrent clients:
+
+    PYTHON=/path/to/venv/bin/python tools/hearth/e2e/all.sh hearth-mail:<commit>
+
 The full suite (every crate's unit tests and the integration suites) runs
 on GitHub Actions, on demand and before a release or a switch of a live
 server; every push there runs formatting, clippy, the build and the
