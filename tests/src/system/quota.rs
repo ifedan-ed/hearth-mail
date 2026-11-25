@@ -277,6 +277,34 @@ pub async fn test(test: &mut TestServer) {
     assert!(response.contains("\"used\":1024"), "{}", response);
     assert!(response.contains("\"hardLimit\":1024"), "{}", response);
 
+    // Over the quota (lowered below the use): the limit is still the
+    // quota, never the use (found by the end-to-end run, 2026-11-25)
+    for limit in [512u64, 1024] {
+        admin
+            .registry_update_object(
+                ObjectType::Account,
+                account_id,
+                json!({ Property::Quotas: VecMap::from_iter([(StorageQuota::MaxDiskQuota, limit)]) }),
+            )
+            .await;
+        let response = account
+            .jmap_method_call(
+                "Quota/get",
+                json!({
+                    "accountId": account.id_string(),
+                    "ids": null
+                }),
+            )
+            .await
+            .to_string();
+        assert!(response.contains("\"used\":1024"), "{}", response);
+        assert!(
+            response.contains(&format!("\"hardLimit\":{limit}")),
+            "{}",
+            response
+        );
+    }
+
     // Test registry quota
     assert_eq!(
         admin

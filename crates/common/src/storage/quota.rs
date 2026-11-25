@@ -139,22 +139,19 @@ impl Server {
         account: &AccountCache,
     ) -> trc::Result<(u64, Option<u64>)> {
         let used = self.get_used_quota_account(account.id).await?.max(0) as u64;
-        let mut available =
-            (account.quota_disk > 0).then(|| account.quota_disk.saturating_sub(used));
-
-        if let Some(tenant_id) = account.id_tenant {
-            let tenant = self.tenant(tenant_id).await?;
-            if tenant.quota_disk > 0 {
-                let tenant_used = self.get_used_quota_tenant(tenant_id).await?.max(0) as u64;
-                let tenant_available = tenant.quota_disk.saturating_sub(tenant_used);
-                available = Some(available.map_or(tenant_available, |a| a.min(tenant_available)));
+        let tenant = match account.id_tenant {
+            Some(tenant_id) => {
+                let tenant = self.tenant(tenant_id).await?;
+                if tenant.quota_disk > 0 {
+                    let tenant_used = self.get_used_quota_tenant(tenant_id).await?.max(0) as u64;
+                    Some((tenant.quota_disk, tenant_used))
+                } else {
+                    None
+                }
             }
-        }
-
-        Ok((
-            used,
-            available.map(|available| used.saturating_add(available)),
-        ))
+            None => None,
+        };
+        Ok((used, effective_limit(used, account.quota_disk, tenant)))
     }
 
     // inbuxa: checks an item against the account's quota and, when it fits,
@@ -207,5 +204,56 @@ impl Default for ObjectQuota {
 impl Default for TenantQuota {
     fn default() -> Self {
         Self([u32::MAX; TenantStorageQuota::COUNT - 1])
+    }
+}
+
+/// The disk limit an account will meet, from what it uses (`used`), its
+/// own quota (`account_quota`, 0 for none) and its tenant's quota and use,
+/// when the tenant has one.
+///
+/// The account's own quota is reported as it is, also when the account is
+/// already over it (a quota lowered below the use, or mail stored before
+/// the quota was set): clients show "43 MB of 40 MB", not a limit that
+/// moves up with the use. Hearth Mail's end-to-end run found the old
+/// arithmetic (used plus the space left, which is zero when over) reporting
+/// the use itself as the limit. The tenant's limit counts as the use plus
+/// the tenant's space left, so a tenant running out shows on every
+/// account in it; the lower of the two applies.
+pub fn effective_limit(used: u64, account_quota: u64, tenant: Option<(u64, u64)>) -> Option<u64> {
+    let own = (account_quota > 0).then_some(account_quota);
+    let tenant =
+        tenant.map(|(quota, tenant_used)| used.saturating_add(quota.saturating_sub(tenant_used)));
+    match (own, tenant) {
+        (Some(own), Some(tenant)) => Some(own.min(tenant)),
+        (own, tenant) => own.or(tenant),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::effective_limit;
+
+    #[test]
+    fn no_limit() {
+        assert_eq!(effective_limit(10, 0, None), None);
+    }
+
+    #[test]
+    fn own_quota_under_and_over() {
+        assert_eq!(effective_limit(10, 40, None), Some(40));
+        // Over the quota: still the quota, never the use.
+        assert_eq!(effective_limit(43, 40, None), Some(40));
+    }
+
+    #[test]
+    fn tenant_space_left_applies_when_lower() {
+        // 50 GB account in a tenant with 5 of 100 left: 10 + 5.
+        assert_eq!(effective_limit(10, 50, Some((100, 95))), Some(15));
+        // Plenty left in the tenant: the account's own quota.
+        assert_eq!(effective_limit(10, 50, Some((1000, 100))), Some(50));
+        // No own quota: the tenant's.
+        assert_eq!(effective_limit(10, 0, Some((100, 95))), Some(15));
+        // Tenant already over: nothing more fits.
+        assert_eq!(effective_limit(10, 50, Some((100, 120))), Some(10));
     }
 }
